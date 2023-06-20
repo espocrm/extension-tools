@@ -1,0 +1,19 @@
+{
+  "name": "espo-extension-tools",
+  "version": "0.0.1",
+  "description": "Tools for EspoCRM extension development.",
+  "main": "build.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "author": "EspoCRM",
+  "license": "ISC",
+  "dependencies": {
+    "archiver": "^4.0.1",
+    "fs-extra": "^9.0.0",
+    "mv": "^2.1.1",
+    "node-fetch": "^3.3.1",
+    "unzipper": "^0.10.11"
+  }
+}
