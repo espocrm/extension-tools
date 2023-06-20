@@ -18,7 +18,11 @@ const extensionParams = require(cwd + '/extension.json');
 const config = helpers.loadConfig();
 const branch = helpers.getProcessParam('branch');
 
-function buildGeneral() {
+/**
+ * @param {{extensionHook: function()}} [options]
+ */
+function buildGeneral(options = {}) {
+
     if (helpers.hasProcessParam('all')) {
         fetchEspo({branch: branch})
             .then(() => install())
@@ -53,7 +57,7 @@ function buildGeneral() {
     }
 
     if (helpers.hasProcessParam('extension')) {
-        buildExtension().then(() => console.log('Done'));
+        buildExtension(options.extensionHook).then(() => console.log('Done'));
     }
 
     if (helpers.hasProcessParam('rebuild')) {
@@ -307,7 +311,11 @@ function afterInstall () {
     })
 }
 
-function buildExtension () {
+/**
+ * @param {function} [hook]
+ * @return {Promise}
+ */
+function buildExtension (hook) {
     return new Promise(resolve => {
         console.log('Building extension package...');
 
@@ -346,6 +354,10 @@ function buildExtension () {
         fs.copySync(cwd + '/src', cwd + '/build/tmp');
 
         internalComposerBuildExtension();
+
+        if (hook) {
+            hook();
+        }
 
         fs.writeFileSync(cwd + '/build/tmp/manifest.json', JSON.stringify(manifest, null, 4));
 
