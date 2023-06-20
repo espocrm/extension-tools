@@ -133,29 +133,6 @@ function fetchEspo (params) {
                             fail();
                         });
                 });
-
-            /*request(archiveUrl)
-                .pipe(fs.createWriteStream(cwd + '/site/archive.zip'))
-                .on('close', () => {
-                    console.log('  Unzipping...');
-
-                    fs.createReadStream(cwd + '/site/archive.zip')
-                        .pipe(unzipper.Extract({path: 'site'}))
-                        .on('close', () => {
-                            fs.unlinkSync(cwd + '/site/archive.zip');
-
-                            helpers.moveDir(
-                                cwd + '/site/espocrm-' + branch.replace('/', '-'),
-                                cwd + '/site'
-                            )
-                                .then(() => resolve());
-                        })
-                        .on('error', () => {
-                            console.log('  Error while unzipping.');
-
-                            fail();
-                        });
-                });*/
         }
         else {
             throw new Error();
