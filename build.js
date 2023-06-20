@@ -311,7 +311,7 @@ function buildExtension () {
     return new Promise(resolve => {
         console.log('Building extension package...');
 
-        const moduleName = extensionParams.module;
+        const moduleName = extensionParams.packageName ?? extensionParams.module;
         const moduleNameHyphen = helpers.camelCaseToHyphen(moduleName);
 
         const packageParams = require(cwd + '/package.json');
