@@ -257,12 +257,8 @@ function copyExtension() {
         new Promise(resolve => {
             console.log('Copying extension to EspoCRM instance...');
 
-            if (extensionParams.bundled) {
-                fs.copySync(cwd + '/build/assets/transpiled/custom', cwd + '/site/client/lib/transpiled');
-            }
-
             const moduleName = extensionParams.module;
-            const moduleNameHyphen = helpers.camelCaseToHyphen(moduleName);
+            const mod = helpers.camelCaseToHyphen(moduleName);
 
             if (fs.existsSync(cwd + '/site/custom/Espo/Modules/' + moduleName)) {
                 console.log('  Removing backend files...');
@@ -270,10 +266,17 @@ function copyExtension() {
                 helpers.deleteDirRecursively(cwd + '/site/custom/Espo/Modules/' + moduleName);
             }
 
-            if (fs.existsSync(cwd + '/site/client/custom/modules/' + moduleNameHyphen)) {
+            if (fs.existsSync(cwd + '/site/client/custom/modules/' + mod)) {
                 console.log('  Removing frontend files...');
 
-                helpers.deleteDirRecursively(cwd + '/site/client/custom/modules/' + moduleNameHyphen);
+                helpers.deleteDirRecursively(cwd + '/site/client/custom/modules/' + mod);
+            }
+
+            if (extensionParams.bundled) {
+                fs.copySync(
+                    cwd + `/build/assets/transpiled/custom/modules/${mod}/src`,
+                    cwd + `/site/client/custom/modules/${mod}/lib/transpiled/src`
+                );
             }
 
             if (fs.existsSync(cwd + '/site/tests/unit/Espo/Modules/' + moduleName)) {
