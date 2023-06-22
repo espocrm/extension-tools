@@ -1,12 +1,13 @@
 {
     "module": "Test",
-    "name": "TEst",
-    "description": "TEst.",
-    "author": "TEst",
+    "name": "Test",
+    "description": "Test.",
+    "author": "Test",
     "acceptableVersions": [
         ">=7.0.0"
     ],
     "php": [
         ">=8.1"
-    ]
+    ],
+    "bundled": true
 }

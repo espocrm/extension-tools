@@ -2,6 +2,7 @@
   "name": "ext-test",
   "version": "0.0.1",
   "description": "",
+  "type": "module",
   "author": "Test",
   "dependencies": {
   }
