@@ -1,0 +1,7 @@
+*
+!.gitignore
+!/codeStyles
+!/fileTemplates
+!/inspectionProfiles
+!/jsonSchemas.xml
+!/misc.xml
