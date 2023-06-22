@@ -322,7 +322,10 @@ function buildExtension (hook) {
         const moduleName = extensionParams.packageName ?? extensionParams.module;
         const moduleNameHyphen = helpers.camelCaseToHyphen(moduleName);
 
-        const packageParams = require(cwd + '/package.json');
+        const packageJsonFile = fs.existsSync(cwd + '/test-package.json') ?
+            cwd + '/test-package.json' : cwd + '/package.json';
+
+        const packageParams = require(packageJsonFile);
 
         let manifest = {
             name: extensionParams.name,

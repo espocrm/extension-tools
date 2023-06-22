@@ -1,0 +1,12 @@
+{
+    "module": "Test",
+    "name": "TEst",
+    "description": "TEst.",
+    "author": "TEst",
+    "acceptableVersions": [
+        ">=7.0.0"
+    ],
+    "php": [
+        ">=8.1"
+    ]
+}
