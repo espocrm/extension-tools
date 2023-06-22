@@ -345,20 +345,25 @@ function buildExtension(hook) {
             const modPaths = {};
             modPaths[mod] = `custom/modules/${mod}`;
 
+            let chunks =  {
+                init: {},
+            };
+
+            const chunkName = 'module-' + mod;
+
+            chunks[chunkName] = {
+                patterns: [`custom/modules/${mod}/src/**/*.js`],
+                mapDependencies: true,
+            };
+
             const bundler = new Bundler(
                 {
-                    order: ['init', 'bundle'],
+                    order: ['init', chunkName],
                     basePath: 'src/files/client',
                     transpiledPath: 'build/assets/transpiled',
                     modulePaths: modPaths,
                     lookupPatterns: [`custom/modules/${mod}/src/**/*.js`],
-                    chunks: {
-                        init: {},
-                        bundle: {
-                            patterns: [`custom/modules/${mod}/src/**/*.js`],
-                            mapDependencies: true,
-                        }
-                    }
+                    chunks: chunks,
                 },
                 [], // @todo
                 `client/custom/modules/${mod}/lib/{*}.js`
@@ -372,7 +377,7 @@ function buildExtension(hook) {
 
             // @todo Minify.
             fs.writeFileSync(cwd + '/build/assets/lib/init.js', result['init'], 'utf8');
-            fs.writeFileSync(cwd + '/build/assets/lib/bundle.js', result['bundle'], 'utf8');
+            fs.writeFileSync(cwd + `/build/assets/lib/${chunkName}.js`, result[chunkName], 'utf8');
 
             return Promise.resolve();
         })
