@@ -8,6 +8,7 @@ import {promisify} from 'node:util';
 import archiver from 'archiver';
 import helpers from './helpers.js';
 import {createRequire} from 'module';
+import {Transpiler, Bundler, TemplateBundler} from 'espo-frontend-build-tools';
 
 const require = createRequire(import.meta.url);
 
@@ -71,7 +72,7 @@ function buildGeneral(options = {}) {
 
 export {buildGeneral};
 
-function fetchEspo (params) {
+function fetchEspo(params) {
     params = params || {};
 
     return new Promise((resolve, fail) => {
@@ -144,7 +145,7 @@ function fetchEspo (params) {
     });
 }
 
-function install () {
+function install() {
     return new Promise(resolve => {
         console.log('Installing EspoCRM instance...');
 
@@ -214,7 +215,7 @@ function install () {
     });
 }
 
-function buildEspo () {
+function buildEspo() {
     console.log('  Npm install...');
 
     cp.execSync("npm ci", {cwd: cwd + '/site', stdio: 'ignore'});
@@ -224,7 +225,7 @@ function buildEspo () {
     cp.execSync("grunt", {cwd: cwd + '/site', stdio: 'ignore'});
 }
 
-function createConfig () {
+function createConfig() {
     const config = helpers.loadConfig();
 
     let charset = config.database.charset ?
@@ -251,47 +252,56 @@ function createConfig () {
     fs.writeFileSync(cwd + '/site/data/config.php', configString);
 }
 
-function copyExtension () {
-    return new Promise(resolve => {
-        console.log('Copying extension to EspoCRM instance...');
+function copyExtension() {
+    return transpile().then(() =>
+        new Promise(resolve => {
+            console.log('Copying extension to EspoCRM instance...');
 
-        const moduleName = extensionParams.module;
-        const moduleNameHyphen = helpers.camelCaseToHyphen(moduleName);
+            if (extensionParams.bundled) {
+                fs.copySync(cwd + '/build/assets/transpiled/custom', cwd + '/site/client/lib/transpiled');
+            }
 
-        if (fs.existsSync(cwd + '/site/custom/Espo/Modules/' + moduleName)) {
-            console.log('  Removing backend files...');
+            const moduleName = extensionParams.module;
+            const moduleNameHyphen = helpers.camelCaseToHyphen(moduleName);
 
-            helpers.deleteDirRecursively(cwd + '/site/custom/Espo/Modules/' + moduleName);
-        }
+            if (fs.existsSync(cwd + '/site/custom/Espo/Modules/' + moduleName)) {
+                console.log('  Removing backend files...');
 
-        if (fs.existsSync(cwd + '/site/client/custom/modules/' + moduleNameHyphen)) {
-            console.log('  Removing frontend files...');
+                helpers.deleteDirRecursively(cwd + '/site/custom/Espo/Modules/' + moduleName);
+            }
 
-            helpers.deleteDirRecursively(cwd + '/site/client/custom/modules/' + moduleNameHyphen);
-        }
+            if (fs.existsSync(cwd + '/site/client/custom/modules/' + moduleNameHyphen)) {
+                console.log('  Removing frontend files...');
 
-        if (fs.existsSync(cwd + '/site/tests/unit/Espo/Modules/' + moduleName)) {
-            console.log('  Removing unit test files...');
+                helpers.deleteDirRecursively(cwd + '/site/client/custom/modules/' + moduleNameHyphen);
+            }
 
-            helpers.deleteDirRecursively(cwd + '/site/tests/unit/Espo/Modules/' + moduleName);
-        }
+            if (fs.existsSync(cwd + '/site/tests/unit/Espo/Modules/' + moduleName)) {
+                console.log('  Removing unit test files...');
 
-        if (fs.existsSync(cwd + '/site/tests/integration/Espo/Modules/' + moduleName)) {
-            console.log('  Removing integration test files...');
+                helpers.deleteDirRecursively(cwd + '/site/tests/unit/Espo/Modules/' + moduleName);
+            }
 
-            helpers.deleteDirRecursively(cwd + '/site/tests/integration/Espo/Modules/' + moduleName);
-        }
+            if (fs.existsSync(cwd + '/site/tests/integration/Espo/Modules/' + moduleName)) {
+                console.log('  Removing integration test files...');
 
-        console.log('  Copying files...');
+                helpers.deleteDirRecursively(cwd + '/site/tests/integration/Espo/Modules/' + moduleName);
+            }
 
-        fs.copySync(cwd + '/src/files', cwd + '/site/');
-        fs.copySync(cwd + '/tests', cwd + '/site/tests');
+            console.log('  Copying files...');
 
-        resolve();
-    });
+            fs.copySync(cwd + '/src/files', cwd + '/site/');
+
+            if (fs.existsSync(cwd + '/tests')) {
+                fs.copySync(cwd + '/tests', cwd + '/site/tests');
+            }
+
+            resolve();
+        })
+    );
 }
 
-function rebuild () {
+function rebuild() {
     return new Promise(resolve => {
         console.log('Rebuilding EspoCRM instance...');
 
@@ -315,74 +325,164 @@ function afterInstall () {
  * @param {function} [hook]
  * @return {Promise}
  */
-function buildExtension (hook) {
-    return new Promise(resolve => {
-        console.log('Building extension package...');
+function buildExtension(hook) {
+    console.log('Building extension package...');
 
-        const moduleName = extensionParams.packageName ?? extensionParams.module;
-        const moduleNameHyphen = helpers.camelCaseToHyphen(moduleName);
+    return transpile()
+        .then(() => {
+            if (!extensionParams.bundled) {
+                return;
+            }
 
-        const packageJsonFile = fs.existsSync(cwd + '/test-package.json') ?
-            cwd + '/test-package.json' : cwd + '/package.json';
+            const mod = helpers.camelCaseToHyphen(extensionParams.module);
 
-        const packageParams = require(packageJsonFile);
+            const modPaths = {};
+            modPaths[mod] = `custom/modules/${mod}`;
 
-        let manifest = {
-            name: extensionParams.name,
-            description: extensionParams.description,
-            author: extensionParams.author,
-            php: extensionParams.php,
-            acceptableVersions: extensionParams.acceptableVersions,
-            version: packageParams.version,
-            skipBackup: true,
-            releaseDate: (new Date()).toISOString().split('T')[0],
-        };
+            const bundler = new Bundler(
+                {
+                    order: ['init', 'bundle'],
+                    basePath: 'src/files/client',
+                    transpiledPath: 'build/assets/transpiled',
+                    modulePaths: modPaths,
+                    lookupPatterns: [`custom/modules/${mod}/src/**/*.js`],
+                    chunks: {
+                        init: {},
+                        bundle: {
+                            patterns: [`custom/modules/${mod}/src/**/*.js`],
+                            mapDependencies: true,
+                        }
+                    }
+                },
+                [], // @todo
+                `client/custom/modules/${mod}/lib/{*}.js`
+            );
 
-        const packageFileName = moduleNameHyphen + '-' + packageParams.version + '.zip';
+            const result = bundler.bundle();
 
-        if (!fs.existsSync(cwd + '/build')) {
-            fs.mkdirSync(cwd + '/build');
-        }
+            if (!fs.existsSync('build/assets/lib')) {
+                fs.mkdirSync('build/assets/lib');
+            }
 
-        if (fs.existsSync(cwd + '/build/tmp')) {
-            helpers.deleteDirRecursively(cwd + '/build/tmp');
-        }
+            // @todo Minify.
+            fs.writeFileSync(cwd + '/build/assets/lib/init.js', result['init'], 'utf8');
+            fs.writeFileSync(cwd + '/build/assets/lib/bundle.js', result['bundle'], 'utf8');
 
-        if (fs.existsSync(cwd + '/build/' + packageFileName)) {
-            fs.unlinkSync(cwd + '/build/' + packageFileName);
-        }
+            return Promise.resolve();
+        })
+        .then(() => {
+            if (!extensionParams.bundled) {
+                return;
+            }
 
-        fs.mkdirSync(cwd + '/build/tmp');
+            const mod = helpers.camelCaseToHyphen(extensionParams.module);
 
-        fs.copySync(cwd + '/src', cwd + '/build/tmp');
+            const templateBundler = new TemplateBundler({
+                dirs: [`src/files/client/custom/modules/${mod}/res/templates`],
+                dest: `build/assets/lib/templates.tpl`,
+                clientDir: `src/files/client`,
+            });
 
-        internalComposerBuildExtension();
+            templateBundler.process();
 
-        if (hook) {
-            hook();
-        }
+            return Promise.resolve();
+        })
+        .then(() =>
+            new Promise(resolve => {
+                const moduleName = extensionParams.packageName ?? extensionParams.module;
+                const packageNameHyphen = helpers.camelCaseToHyphen(moduleName);
 
-        fs.writeFileSync(cwd + '/build/tmp/manifest.json', JSON.stringify(manifest, null, 4));
+                const mod = helpers.camelCaseToHyphen(extensionParams.module);
 
-        const archive = archiver('zip');
+                const packageJsonFile = fs.existsSync(cwd + '/test-package.json') ?
+                    cwd + '/test-package.json' : cwd + '/package.json';
 
-        const zipOutput = fs.createWriteStream(cwd + '/build/' + packageFileName);
+                const packageParams = require(packageJsonFile);
 
-        zipOutput.on('close', () => {
-            console.log('Package has been built.');
+                let manifest = {
+                    name: extensionParams.name,
+                    description: extensionParams.description,
+                    author: extensionParams.author,
+                    php: extensionParams.php,
+                    acceptableVersions: extensionParams.acceptableVersions,
+                    version: packageParams.version,
+                    skipBackup: true,
+                    releaseDate: (new Date()).toISOString().split('T')[0],
+                };
 
-            helpers.deleteDirRecursively(cwd + '/build/tmp');
+                const packageFileName = packageNameHyphen + '-' + packageParams.version + '.zip';
 
-            resolve();
-        });
+                if (!fs.existsSync(cwd + '/build')) {
+                    fs.mkdirSync(cwd + '/build');
+                }
+
+                if (fs.existsSync(cwd + '/build/tmp')) {
+                    helpers.deleteDirRecursively(cwd + '/build/tmp');
+                }
+
+                if (fs.existsSync(cwd + '/build/' + packageFileName)) {
+                    fs.unlinkSync(cwd + '/build/' + packageFileName);
+                }
+
+                fs.mkdirSync(cwd + '/build/tmp');
+
+                fs.copySync(cwd + '/src', cwd + '/build/tmp');
+
+                if (extensionParams.bundled) {
+                    fs.copySync(cwd + '/build/assets/lib', cwd + `/build/tmp/files/client/custom/modules/${mod}/lib`);
+                }
+
+                internalComposerBuildExtension();
+
+                if (hook) {
+                    hook();
+                }
+
+                fs.writeFileSync(cwd + '/build/tmp/manifest.json', JSON.stringify(manifest, null, 4));
+
+                const archive = archiver('zip');
+
+                const zipOutput = fs.createWriteStream(cwd + '/build/' + packageFileName);
+
+                zipOutput.on('close', () => {
+                    console.log('Package has been built.');
+
+                    helpers.deleteDirRecursively(cwd + '/build/tmp');
+
+                    resolve();
+                });
 
 
-        archive.directory(cwd + '/build/tmp', '').pipe(zipOutput);
-        archive.finalize();
-    });
+                archive.directory(cwd + '/build/tmp', '').pipe(zipOutput);
+                archive.finalize();
+            })
+        );
 }
 
-function installExtensions () {
+/**
+ * @return {Promise<void>}
+ */
+function transpile() {
+    if (!extensionParams.bundled) {
+        return Promise.resolve();
+    }
+
+    console.log('Transpiling...');
+
+    const moduleNameHyphen = helpers.camelCaseToHyphen(extensionParams.module);
+
+    const transpiler = new Transpiler({
+        path: `src/files/client/custom/modules/${moduleNameHyphen}`,
+        mod: moduleNameHyphen,
+        destDir: `build/assets/transpiled/custom`,
+    });
+
+    transpiler.process();
+
+    return Promise.resolve();
+}
+
+function installExtensions() {
     return new Promise(resolve => {
 
         if (!fs.existsSync(cwd + '/extensions')) {
@@ -413,7 +513,7 @@ function installExtensions () {
     });
 }
 
-function setOwner () {
+function setOwner() {
     return new Promise(resolve => {
         try {
             cp.execSync(
@@ -430,7 +530,7 @@ function setOwner () {
     });
 }
 
-function composerInstall () {
+function composerInstall() {
     return new Promise(resolve => {
         const moduleName = extensionParams.module;
 
@@ -440,7 +540,7 @@ function composerInstall () {
     });
 }
 
-function internalComposerInstall (modulePath) {
+function internalComposerInstall(modulePath) {
     if (!fs.existsSync(modulePath + '/composer.json')) {
 
         return;
