@@ -333,6 +333,9 @@ function buildExtension(hook) {
 
     return transpile()
         .then(() => {
+            helpers.deleteDirRecursively(cwd + `/build/assets/lib`);
+        })
+        .then(() => {
             if (!extensionParams.bundled) {
                 return;
             }
@@ -469,6 +472,8 @@ function transpile() {
     if (!extensionParams.bundled) {
         return Promise.resolve();
     }
+
+    helpers.deleteDirRecursively(cwd + `/build/assets/transpiled/custom`);
 
     console.log('Transpiling...');
 
