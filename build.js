@@ -165,9 +165,12 @@ function install() {
 
         console.log('  Install: setupConfirmation...');
 
+        const dbPlatform = config.database.platform ?? 'Mysql';
+
         cp.execSync(
             "php install/cli.php -a setupConfirmation -d \"host-name=" + config.database.host +
             "&db-name=" + config.database.dbname +
+            "&db-platform=" + dbPlatform +
             "&db-user-name=" + config.database.user +
             "&db-user-password=" + config.database.password + "\"",
             {cwd: cwd + '/site'}
