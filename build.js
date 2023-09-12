@@ -614,14 +614,13 @@ function internalComposerBuildExtension() {
 function databaseReset() {
   const charset = config.database.charset;
   const dbname = config.database.dbname;
-  const collation = config.database.collation;
   const user = config.database.user;
 
   console.log('Resetting the database...');
 
   return new Promise(resolve => {
       cp.execSync(`mysql -u ${user} -e 'DROP DATABASE IF EXISTS \`${dbname}\`'`);
-      cp.execSync(`mysql -u ${user} -e 'CREATE SCHEMA \`${dbname}\` DEFAULT CHARACTER SET ${charset} COLLATE ${collation}'`);
+      cp.execSync(`mysql -u ${user} -e 'CREATE SCHEMA \`${dbname}\` DEFAULT CHARACTER SET ${charset}'`);
 
       resolve();
   })
