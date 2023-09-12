@@ -26,9 +26,9 @@ function buildGeneral(options = {}) {
 
     if (helpers.hasProcessParam('all')) {
         fetchEspo({branch: branch})
-            .then(() => beforeInstall())
             .then(() => install())
             .then(() => installExtensions())
+            .then(() => beforeInstall())
             .then(() => copyExtension())
             .then(() => composerInstall())
             .then(() => rebuild())
@@ -327,7 +327,7 @@ function beforeInstall () {
   return new Promise(resolve => {
       console.log('Running before-install script...');
 
-      cp.execSync("php before_install.php", {cwd: './php_scripts'});
+      cp.execSync("php before_install.php", {cwd: cwd + '/php_scripts'});
 
       resolve();
   })
