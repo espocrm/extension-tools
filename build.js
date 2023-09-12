@@ -24,6 +24,10 @@ const branch = helpers.getProcessParam('branch');
  */
 function buildGeneral(options = {}) {
 
+    if (helpers.hasProcessParam('db-reset')) {
+        databaseReset().then(() => console.log('Done'));
+    }
+
     if (helpers.hasProcessParam('all')) {
         fetchEspo({branch: branch})
             .then(() => install())
@@ -589,4 +593,20 @@ function internalComposerBuildExtension() {
             fs.unlinkSync(cwd + '/build/tmp/' + file);
         }
     });
+}
+
+function databaseReset() {
+  const charset = config.database.charset;
+  const dbname = config.database.dbname;
+  const collation = config.database.collation;
+  const user = config.database.user;
+
+  console.log('Resetting the database...');
+
+  return new Promise(resolve => {
+      cp.execSync(`mysql -u ${user} -e 'DROP DATABASE IF EXISTS \`${dbname}\`'`);
+      cp.execSync(`mysql -u ${user} -e 'CREATE SCHEMA \`${dbname}\` DEFAULT CHARACTER SET ${charset} COLLATE ${collation}'`);
+
+      resolve();
+  })
 }
