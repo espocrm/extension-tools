@@ -9,6 +9,7 @@ import archiver from 'archiver';
 import helpers from './helpers.js';
 import {createRequire} from 'module';
 import {Transpiler, Bundler, TemplateBundler} from 'espo-frontend-build-tools';
+import { exit } from 'process';
 
 const require = createRequire(import.meta.url);
 
@@ -24,21 +25,60 @@ const branch = helpers.getProcessParam('branch');
  */
 function buildGeneral(options = {}) {
 
+    // Update the local archive for faster installs
+    if (helpers.hasProcessParam('update-archive')) {
+      updateArchive({branch: branch}).then(() => console.log('Done'));
+    }
+
+    // Delete and create the database
     if (helpers.hasProcessParam('db-reset')) {
         databaseReset().then(() => console.log('Done'));
     }
 
+    // From BeforeInstall to the end
+    if (helpers.hasProcessParam('before-to-end')) {
+        beforeInstall()
+        .then(() => copyExtension())
+        .then(() => composerInstall())
+        .then(() => rebuild())
+        .then(() => afterInstall())
+        .then(() => setOwner())
+        .then(() => console.log('Done'));
+    }
+
+    // Replace constants in files
+    if (helpers.hasProcessParam('constants')) {
+        const path = helpers.hasProcessParam('prod') ? './build/tmp/files/' : './site/';
+
+        updateConstants({path: path})
+          .then(() => console.log('Done'));
+    }
+
     if (helpers.hasProcessParam('all')) {
-        fetchEspo({branch: branch})
-            .then(() => beforeInstall())
+        const params = {
+          local: helpers.hasProcessParam("local"),
+          branch: branch
+        }
+
+        if(helpers.hasProcessParam("skip-extension")) {
+            fetchEspo(params)
             .then(() => install())
             .then(() => installExtensions())
+            .then(() => rebuild())
+            .then(() => setOwner())
+            .then(() => console.log('Done'));
+        } else {
+            fetchEspo(params)
+            .then(() => install())
+            .then(() => installExtensions())
+            .then(() => beforeInstall())
             .then(() => copyExtension())
             .then(() => composerInstall())
             .then(() => rebuild())
             .then(() => afterInstall())
             .then(() => setOwner())
             .then(() => console.log('Done'));
+        }
     }
 
     if (helpers.hasProcessParam('install')) {
@@ -82,75 +122,184 @@ function buildGeneral(options = {}) {
 
 export {buildGeneral};
 
+function updateArchive (params) {
+  params = params || {};
+
+  return new Promise((resolve, fail) => {
+      console.log('Updating the local archive...');
+
+      if (fs.existsSync(cwd + './archive/archive.zip')) {
+          fs.unlinkSync(cwd + './archive/archive.zip');
+      }
+
+      let branch = params.branch || config.espocrm.branch;
+
+      if (config.espocrm.repository.indexOf('https://github.com') === 0) {
+          let repository = config.espocrm.repository;
+
+          if (repository.slice(-4) === '.git') {
+              repository = repository.slice(0, repository.length - 4);
+          }
+          if (repository.slice(-1) !== '/') {
+              repository += '/';
+          }
+          let archiveUrl = repository + 'archive/' + branch + '.zip';
+
+          console.log('  Downloading EspoCRM archive from Github...');
+
+          fetch(archiveUrl)
+              .then(response => {
+                  if (!response.ok) {
+                      throw new Error(`Unexpected response ${response.statusText}.`);
+                  }
+
+                  return response.body;
+              })
+              .then(body => {
+                  const streamPipeline = promisify(pipeline);
+
+                  return streamPipeline(body, fs.createWriteStream(cwd + '/archive/archive.zip'));
+              })
+      }
+      else {
+          throw new Error();
+      }
+
+
+  });
+}
+
+function updateConstants (params) {
+  const defaultPath = "./site/";
+
+  params = params || { path: defaultPath };
+  if(params.path === '' || params.path === null || !params.hasOwnProperty('path'))
+    params.path = defaultPath;
+
+  let path = params.path + "/custom/Espo/Modules/Paragon/Resources";
+
+  return new Promise((resolve, fail) => {
+    console.log('Updating constants...');
+    cp.execSync("php update_constants.php " + path, {cwd: cwd + '/php_scripts'});
+
+    resolve();
+  })
+}
+
+function databaseReset() {
+  const charset = config.database.charset;
+  const dbname = config.database.dbname;
+  const user = config.database.user;
+
+  console.log('Resetting the database...');
+
+  return new Promise(resolve => {
+      cp.execSync(`mysql -u ${user} -e 'DROP DATABASE IF EXISTS \`${dbname}\`'`);
+      cp.execSync(`mysql -u ${user} -e 'CREATE SCHEMA \`${dbname}\` DEFAULT CHARACTER SET ${charset}'`);
+
+      resolve();
+  })
+}
+
 function fetchEspo(params) {
-    params = params || {};
+    params = params || {useLocal: false};
 
     return new Promise((resolve, fail) => {
-        console.log('Fetching EspoCRM repository...');
+        if (params.local) {
+            console.log('Using the existing archive...');
 
-        if (fs.existsSync(cwd + '/site/archive.zip')) {
-            fs.unlinkSync(cwd + '/site/archive.zip');
-        }
+            let branch = params.branch || config.espocrm.branch;
 
-        helpers.deleteDirRecursively(cwd + '/site');
-
-        if (!fs.existsSync(cwd + '/site')) {
-            fs.mkdirSync(cwd + '/site');
-        }
-
-        let branch = params.branch || config.espocrm.branch;
-
-        if (config.espocrm.repository.indexOf('https://github.com') === 0) {
-            let repository = config.espocrm.repository;
-
-            if (repository.slice(-4) === '.git') {
-                repository = repository.slice(0, repository.length - 4);
+            if (!fs.existsSync(cwd + '/archive/archive.zip')) {
+                console.log("ERROR: No archive is available in ./archive")
+                fail();
             }
 
-            if (repository.slice(-1) !== '/') {
-                repository += '/';
+            helpers.deleteDirRecursively(cwd + '/site');
+
+            if (!fs.existsSync(cwd + '/site')) {
+                fs.mkdirSync(cwd + '/site');
             }
 
-            let archiveUrl = repository + 'archive/' + branch + '.zip';
-
-            console.log('  Downloading EspoCRM archive from Github...');
-
-            fetch(archiveUrl)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Unexpected response ${response.statusText}.`);
-                    }
-
-                    return response.body;
+            console.log('  Unzipping...');
+            fs.createReadStream(cwd + '/archive/archive.zip')
+                .pipe(unzipper.Extract({path: 'site'}))
+                .on('close', () => {
+                    helpers.moveDir(cwd + '/site/espocrm-' + branch.replace('/', '-'), './site')
+                        .then(() => resolve());
                 })
-                .then(body => {
-                    const streamPipeline = promisify(pipeline);
-
-                    return streamPipeline(body, fs.createWriteStream(cwd + '/site/archive.zip'));
-                })
-                .then(() => {
-                    console.log('  Unzipping...');
-
-                    fs.createReadStream(cwd + '/site/archive.zip')
-                        .pipe(unzipper.Extract({path: 'site'}))
-                        .on('close', () => {
-                            fs.unlinkSync(cwd + '/site/archive.zip');
-
-                            helpers.moveDir(
-                                cwd + '/site/espocrm-' + branch.replace('/', '-'),
-                                cwd + '/site'
-                            )
-                                .then(() => resolve());
-                        })
-                        .on('error', () => {
-                            console.log('  Error while unzipping.');
-
-                            fail();
-                        });
+                .on('error', () => {
+                    console.log('  Error while unzipping.');
+                    fail();
                 });
-        }
-        else {
-            throw new Error();
+
+        } else {
+            console.log('Fetching EspoCRM repository...');
+
+            if (fs.existsSync(cwd + '/site/archive.zip')) {
+                fs.unlinkSync(cwd + '/site/archive.zip');
+            }
+
+            helpers.deleteDirRecursively(cwd + '/site');
+
+            if (!fs.existsSync(cwd + '/site')) {
+                fs.mkdirSync(cwd + '/site');
+            }
+
+            let branch = params.branch || config.espocrm.branch;
+
+            if (config.espocrm.repository.indexOf('https://github.com') === 0) {
+                let repository = config.espocrm.repository;
+
+                if (repository.slice(-4) === '.git') {
+                    repository = repository.slice(0, repository.length - 4);
+                }
+
+                if (repository.slice(-1) !== '/') {
+                    repository += '/';
+                }
+
+                let archiveUrl = repository + 'archive/' + branch + '.zip';
+
+                console.log('  Downloading EspoCRM archive from Github...');
+
+                fetch(archiveUrl)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`Unexpected response ${response.statusText}.`);
+                        }
+
+                        return response.body;
+                    })
+                    .then(body => {
+                        const streamPipeline = promisify(pipeline);
+
+                        return streamPipeline(body, fs.createWriteStream(cwd + '/site/archive.zip'));
+                    })
+                    .then(() => {
+                        console.log('  Unzipping...');
+
+                        fs.createReadStream(cwd + '/site/archive.zip')
+                            .pipe(unzipper.Extract({path: 'site'}))
+                            .on('close', () => {
+                                fs.unlinkSync(cwd + '/site/archive.zip');
+
+                                helpers.moveDir(
+                                    cwd + '/site/espocrm-' + branch.replace('/', '-'),
+                                    cwd + '/site'
+                                )
+                                    .then(() => resolve());
+                            })
+                            .on('error', () => {
+                                console.log('  Error while unzipping.');
+
+                                fail();
+                            });
+                    });
+            }
+            else {
+                throw new Error();
+            }
         }
     });
 }
@@ -312,6 +461,8 @@ function copyExtension() {
                 fs.copySync(cwd + '/tests', cwd + '/site/tests');
             }
 
+            updateConstants({path: "./site/"});
+
             resolve();
         })
     );
@@ -328,13 +479,13 @@ function rebuild() {
 }
 
 function beforeInstall () {
-  return new Promise(resolve => {
-      console.log('Running before-install script...');
+    return new Promise(resolve => {
+        console.log('Running before-install script...');
 
-      cp.execSync("php before_install.php", {cwd: './php_scripts'});
+        cp.execSync("php before_install.php", {cwd: cwd + '/php_scripts'});
 
-      resolve();
-  })
+        resolve();
+    })
 }
 
 function afterInstall () {
@@ -465,6 +616,8 @@ function buildExtension(hook) {
                 if (extensionParams.bundled) {
                     fs.copySync(cwd + '/build/assets/lib', cwd + `/build/tmp/files/client/custom/modules/${mod}/lib`);
                 }
+
+                updateConstants({path: "./build/tmp/files/"});
 
                 internalComposerBuildExtension();
 
@@ -609,19 +762,4 @@ function internalComposerBuildExtension() {
             fs.unlinkSync(cwd + '/build/tmp/' + file);
         }
     });
-}
-
-function databaseReset() {
-  const charset = config.database.charset;
-  const dbname = config.database.dbname;
-  const user = config.database.user;
-
-  console.log('Resetting the database...');
-
-  return new Promise(resolve => {
-      cp.execSync(`mysql -u ${user} -e 'DROP DATABASE IF EXISTS \`${dbname}\`'`);
-      cp.execSync(`mysql -u ${user} -e 'CREATE SCHEMA \`${dbname}\` DEFAULT CHARACTER SET ${charset}'`);
-
-      resolve();
-  })
 }
