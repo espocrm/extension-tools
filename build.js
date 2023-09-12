@@ -26,6 +26,7 @@ function buildGeneral(options = {}) {
 
     if (helpers.hasProcessParam('all')) {
         fetchEspo({branch: branch})
+            .then(() => beforeInstall())
             .then(() => install())
             .then(() => installExtensions())
             .then(() => copyExtension())
@@ -53,6 +54,11 @@ function buildGeneral(options = {}) {
             setOwner().then(() => console.log('Done'));
         });
     }
+
+    if (helpers.hasProcessParam('before-install')) {
+        beforeInstall().then(() => console.log('Done'));
+    }
+
     if (helpers.hasProcessParam('after-install')) {
         afterInstall().then(() => console.log('Done'));
     }
@@ -315,6 +321,16 @@ function rebuild() {
 
         resolve();
     });
+}
+
+function beforeInstall () {
+  return new Promise(resolve => {
+      console.log('Running before-install script...');
+
+      cp.execSync("php before_install.php", {cwd: './php_scripts'});
+
+      resolve();
+  })
 }
 
 function afterInstall () {
