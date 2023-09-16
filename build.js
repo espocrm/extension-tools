@@ -32,7 +32,7 @@ function buildGeneral(options = {}) {
 
     // Delete and create the database
     if (helpers.hasProcessParam('db-reset')) {
-        databaseReset().then(() => console.log('Done'));
+        databaseReset();
     }
 
     // From BeforeInstall to the end
@@ -221,7 +221,6 @@ function fetchEspo(params) {
                 fs.mkdirSync(cwd + '/site');
             }
 
-            console.log('  Unzipping...');
             fs.createReadStream(cwd + '/archive/archive.zip')
                 .pipe(unzipper.Extract({path: 'site'}))
                 .on('close', () => {
