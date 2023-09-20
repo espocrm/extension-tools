@@ -27,7 +27,7 @@ function buildGeneral(options = {}) {
 
     // Update the local archive for faster installs
     if (helpers.hasProcessParam('update-archive')) {
-      updateArchive({branch: branch}).then(() => console.log('Done'));
+      updateArchive({branch: branch});
     }
 
     // Delete and create the database
@@ -42,16 +42,13 @@ function buildGeneral(options = {}) {
         .then(() => composerInstall())
         .then(() => rebuild())
         .then(() => afterInstall())
-        .then(() => setOwner())
-        .then(() => console.log('Done'));
+        .then(() => setOwner());
     }
 
     // Replace constants in files
     if (helpers.hasProcessParam('constants')) {
         const path = helpers.hasProcessParam('prod') ? './build/tmp/files/' : './site/';
-
         updateConstants({path: path})
-          .then(() => console.log('Done'));
     }
 
     if (helpers.hasProcessParam('all')) {
@@ -65,8 +62,7 @@ function buildGeneral(options = {}) {
             .then(() => install())
             .then(() => installExtensions())
             .then(() => rebuild())
-            .then(() => setOwner())
-            .then(() => console.log('Done'));
+            .then(() => setOwner());
         } else {
             fetchEspo(params)
             .then(() => install())
@@ -76,47 +72,46 @@ function buildGeneral(options = {}) {
             .then(() => composerInstall())
             .then(() => rebuild())
             .then(() => afterInstall())
-            .then(() => setOwner())
-            .then(() => console.log('Done'));
+            .then(() => setOwner());
         }
     }
 
     if (helpers.hasProcessParam('install')) {
         install().then(() => {
             installExtensions().then(() => {
-                setOwner().then(() => console.log('Done'));
+                setOwner();
             });
         });
     }
 
     if (helpers.hasProcessParam('fetch')) {
-        fetchEspo({branch: branch}).then(() => console.log('Done'));
+        fetchEspo({branch: branch});
     }
 
     if (helpers.hasProcessParam('copy')) {
         copyExtension().then(() => {
-            setOwner().then(() => console.log('Done'));
+            setOwner();
         });
     }
 
     if (helpers.hasProcessParam('before-install')) {
-        beforeInstall().then(() => console.log('Done'));
+        beforeInstall();
     }
 
     if (helpers.hasProcessParam('after-install')) {
-        afterInstall().then(() => console.log('Done'));
+        afterInstall();
     }
 
     if (helpers.hasProcessParam('extension')) {
-        buildExtension(options.extensionHook).then(() => console.log('Done'));
+        buildExtension(options.extensionHook);
     }
 
     if (helpers.hasProcessParam('rebuild')) {
-        rebuild().then(() => console.log('Done'));
+        rebuild();
     }
 
     if (helpers.hasProcessParam('composer-install')) {
-        composerInstall().then(() => console.log('Done'));
+        composerInstall();
     }
 }
 
