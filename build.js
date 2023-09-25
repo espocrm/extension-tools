@@ -123,6 +123,10 @@ function updateArchive (params) {
   return new Promise((resolve, fail) => {
       console.log('Updating the local archive...');
 
+      if (!fs.existsSync(cwd + '/archive')) {
+          fs.mkdirSync(cwd + '/archive');
+      }
+
       if (fs.existsSync(cwd + './archive/archive.zip')) {
           fs.unlinkSync(cwd + './archive/archive.zip');
       }
