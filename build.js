@@ -9,7 +9,6 @@ import archiver from 'archiver';
 import helpers from './helpers.js';
 import {createRequire} from 'module';
 import {Transpiler, Bundler, TemplateBundler} from 'espo-frontend-build-tools';
-import { exit } from 'process';
 
 const require = createRequire(import.meta.url);
 
@@ -72,25 +71,25 @@ function buildGeneral(options = {}) {
             .then(() => composerInstall())
             .then(() => rebuild())
             .then(() => afterInstall())
-            .then(() => setOwner());
-        }
+            .then(() => setOwner())
+            .then(() => console.log('Done'));
     }
 
     if (helpers.hasProcessParam('install')) {
         install().then(() => {
             installExtensions().then(() => {
-                setOwner();
+                setOwner().then(() => console.log('Done'));
             });
         });
     }
 
     if (helpers.hasProcessParam('fetch')) {
-        fetchEspo({branch: branch});
+        fetchEspo({branch: branch}).then(() => console.log('Done'));
     }
 
     if (helpers.hasProcessParam('copy')) {
         copyExtension().then(() => {
-            setOwner();
+            setOwner().then(() => console.log('Done'));
         });
     }
 
@@ -99,19 +98,19 @@ function buildGeneral(options = {}) {
     }
 
     if (helpers.hasProcessParam('after-install')) {
-        afterInstall();
+        afterInstall().then(() => console.log('Done'));
     }
 
     if (helpers.hasProcessParam('extension')) {
-        buildExtension(options.extensionHook);
+        buildExtension(options.extensionHook).then(() => console.log('Done'));
     }
 
     if (helpers.hasProcessParam('rebuild')) {
-        rebuild();
+        rebuild().then(() => console.log('Done'));
     }
 
     if (helpers.hasProcessParam('composer-install')) {
-        composerInstall();
+        composerInstall().then(() => console.log('Done'));
     }
 }
 
