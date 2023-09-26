@@ -73,6 +73,7 @@ function buildGeneral(options = {}) {
             .then(() => afterInstall())
             .then(() => setOwner())
             .then(() => console.log('Done'));
+        }
     }
 
     if (helpers.hasProcessParam('install')) {
