@@ -275,7 +275,10 @@ function copyExtension() {
                 helpers.deleteDirRecursively(cwd + '/site/client/custom/modules/' + mod);
             }
 
-            if (extensionParams.bundled) {
+            if (
+                extensionParams.bundled &&
+                fs.existsSync(cwd + `/build/assets/transpiled/custom/modules/${mod}/src`)
+            ) {
                 fs.copySync(
                     cwd + `/build/assets/transpiled/custom/modules/${mod}/src`,
                     cwd + `/site/client/custom/modules/${mod}/lib/transpiled/src`
