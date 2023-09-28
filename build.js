@@ -178,8 +178,10 @@ function updateConstants (params) {
   let path = params.path + "/custom/Espo/Modules/Paragon/Resources";
 
   return new Promise((resolve, fail) => {
-    console.log('Updating constants...');
-    cp.execSync("php update_constants.php " + path, {cwd: cwd + '/php_scripts'});
+    if (fs.existsSync(cwd + '/php_scripts/update_constants.php')) {
+      console.log('Updating constants...');
+      cp.execSync("php update_constants.php " + path, {cwd: cwd + '/php_scripts'});
+    }
 
     resolve();
   })
