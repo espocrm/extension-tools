@@ -1,6 +1,6 @@
 {
   "name": "espo-extension-tools",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Tools for EspoCRM extension development.",
   "main": "build.js",
   "scripts": {
@@ -10,11 +10,11 @@
   "author": "EspoCRM",
   "license": "MIT",
   "dependencies": {
+    "adm-zip": "^0.5.10",
     "archiver": "^4.0.1",
     "espo-frontend-build-tools": "github:espocrm/frontend-build-tools#0.0.3",
     "fs-extra": "^9.0.0",
     "mv": "^2.1.1",
-    "node-fetch": "^3.3.1",
-    "unzipper": "^0.10.11"
+    "node-fetch": "^3.3.1"
   }
 }

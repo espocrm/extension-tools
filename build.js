@@ -1,11 +1,11 @@
 import fs from 'fs-extra';
-import unzipper from 'unzipper';
+import archiver from 'archiver';
 import cp from 'child_process';
 import path from 'path';
 import fetch from 'node-fetch';
 import {pipeline} from 'node:stream';
 import {promisify} from 'node:util';
-import archiver from 'archiver';
+import AdmZip from 'adm-zip';
 import helpers from './helpers.js';
 import {createRequire} from 'module';
 import {Transpiler, Bundler, TemplateBundler} from 'espo-frontend-build-tools';
@@ -205,7 +205,7 @@ function databaseReset() {
 function fetchEspo(params) {
     params = params || {useLocal: false};
 
-    return new Promise((resolve, fail) => {
+    return new Promise((resolve) => {
         if (params.local) {
             console.log('Using the existing archive...');
 
@@ -222,16 +222,16 @@ function fetchEspo(params) {
                 fs.mkdirSync(cwd + '/site');
             }
 
-            fs.createReadStream(cwd + '/archive/archive.zip')
-                .pipe(unzipper.Extract({path: 'site'}))
-                .on('close', () => {
-                    helpers.moveDir(cwd + '/site/espocrm-' + branch.replace('/', '-'), './site')
-                        .then(() => resolve());
-                })
-                .on('error', () => {
-                    console.log('  Error while unzipping.');
-                    fail();
-                });
+            const archive = new AdmZip(cwd + '/archive/archive.zip');
+
+            archive.extractAllTo(cwd + '/site', true, true);
+
+            helpers
+                .moveDir(
+                    cwd + '/site/espocrm-' + branch.replace('/', '-'),
+                    cwd + '/site'
+                )
+                .then(() => resolve());
 
         } else {
             console.log('Fetching EspoCRM repository...');
@@ -279,22 +279,18 @@ function fetchEspo(params) {
                     .then(() => {
                         console.log('  Unzipping...');
 
-                        fs.createReadStream(cwd + '/site/archive.zip')
-                            .pipe(unzipper.Extract({path: 'site'}))
-                            .on('close', () => {
-                                fs.unlinkSync(cwd + '/site/archive.zip');
+                        const archive = new AdmZip(cwd + '/site/archive.zip');
 
-                                helpers.moveDir(
-                                    cwd + '/site/espocrm-' + branch.replace('/', '-'),
-                                    cwd + '/site'
-                                )
-                                    .then(() => resolve());
-                            })
-                            .on('error', () => {
-                                console.log('  Error while unzipping.');
+                        archive.extractAllTo(cwd + '/site', true, true);
 
-                                fail();
-                            });
+                        fs.unlinkSync(cwd + '/site/archive.zip');
+
+                        helpers
+                            .moveDir(
+                                cwd + '/site/espocrm-' + branch.replace('/', '-'),
+                                cwd + '/site'
+                            )
+                            .then(() => resolve());
                     });
             }
             else {
