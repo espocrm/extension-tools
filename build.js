@@ -1,11 +1,11 @@
 import fs from 'fs-extra';
-import unzipper from 'unzipper';
+import archiver from 'archiver';
 import cp from 'child_process';
 import path from 'path';
 import fetch from 'node-fetch';
 import {pipeline} from 'node:stream';
 import {promisify} from 'node:util';
-import archiver from 'archiver';
+import AdmZip from 'adm-zip';
 import helpers from './helpers.js';
 import {createRequire} from 'module';
 import {Transpiler, Bundler, TemplateBundler} from 'espo-frontend-build-tools';
@@ -75,7 +75,7 @@ export {buildGeneral};
 function fetchEspo(params) {
     params = params || {};
 
-    return new Promise((resolve, fail) => {
+    return new Promise((resolve) => {
         console.log('Fetching EspoCRM repository...');
 
         if (fs.existsSync(cwd + '/site/archive.zip')) {
@@ -121,22 +121,18 @@ function fetchEspo(params) {
                 .then(() => {
                     console.log('  Unzipping...');
 
-                    fs.createReadStream(cwd + '/site/archive.zip')
-                        .pipe(unzipper.Extract({path: 'site'}))
-                        .on('close', () => {
-                            fs.unlinkSync(cwd + '/site/archive.zip');
+                    const archive = new AdmZip(cwd + '/site/archive.zip');
 
-                            helpers.moveDir(
-                                cwd + '/site/espocrm-' + branch.replace('/', '-'),
-                                cwd + '/site'
-                            )
-                                .then(() => resolve());
-                        })
-                        .on('error', () => {
-                            console.log('  Error while unzipping.');
+                    archive.extractAllTo(cwd + '/site', true, true);
 
-                            fail();
-                        });
+                    fs.unlinkSync(cwd + '/site/archive.zip');
+
+                    helpers
+                        .moveDir(
+                            cwd + '/site/espocrm-' + branch.replace('/', '-'),
+                            cwd + '/site'
+                        )
+                        .then(() => resolve());
                 });
         }
         else {
