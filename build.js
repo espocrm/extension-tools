@@ -549,13 +549,13 @@ function composerInstall() {
     return new Promise(resolve => {
         const moduleName = extensionParams.module;
 
-        internalComposerInstall(cwd + '/site/custom/Espo/Modules/' + moduleName);
+        internalComposerInstall(cwd + '/site/custom/Espo/Modules/' + moduleName, true);
 
         resolve();
     });
 }
 
-function internalComposerInstall(modulePath) {
+function internalComposerInstall(modulePath, includeDev) {
     if (!fs.existsSync(modulePath + '/composer.json')) {
 
         return;
@@ -563,8 +563,10 @@ function internalComposerInstall(modulePath) {
 
     console.log('Running composer install...');
 
+    let devOption = includeDev ? "" : "--no-dev";
+
     cp.execSync(
-        "composer install --no-dev --ignore-platform-reqs",
+        `composer install ${devOption} --ignore-platform-reqs`,
         {
             cwd: modulePath,
             stdio: 'ignore',
@@ -575,7 +577,7 @@ function internalComposerInstall(modulePath) {
 function internalComposerBuildExtension() {
     const moduleName = extensionParams.module;
 
-    internalComposerInstall(cwd + '/build/tmp/files/custom/Espo/Modules/' + moduleName);
+    internalComposerInstall(cwd + '/build/tmp/files/custom/Espo/Modules/' + moduleName, false);
 
     const removedFileList = [
         'files/custom/Espo/Modules/' + moduleName + '/composer.json',
