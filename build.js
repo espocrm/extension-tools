@@ -49,9 +49,10 @@ function buildGeneral(options = {}) {
     }
 
     if (helpers.hasProcessParam('copy')) {
-        copyExtension().then(() => {
-            setOwner().then(() => console.log('Done'));
-        });
+        copyExtension()
+        .then(() => setOwner())
+        .then(() => composerInstall())
+        .then(() => console.log('Done'));
     }
     if (helpers.hasProcessParam('after-install')) {
         afterInstall().then(() => console.log('Done'));
