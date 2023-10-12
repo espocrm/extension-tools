@@ -23,6 +23,24 @@ const branch = helpers.getProcessParam('branch');
  * @param {{extensionHook: function()}} [options]
  */
 function buildGeneral(options = {}) {
+    //Workflows:
+    //
+    //Single Commands
+    // --update-archive             Download and store the latest version of Espo in the given branch for reuse
+    // --db-reset                   Drop and create the database schema (only the schema, no tables)
+    // --rebuild                    Rebuild Espo's configuration (CLI version of UI->Administration->Rebuild)
+    // --extension                  Build the extension for distribution
+    // --before-install             Run only the beforeInstall process for the extension
+    // --after-install              Run only the afterInstall process for the extension
+    // --composer-install           Run composer install on the Espo installation (including the extension's composer requirements)
+
+    // Compound Commands
+    // --all [--db-reset] [--local] Rebuild from the beginning [with a new database] [from a local archive]
+    // --fetch --[local]            Download and extract the latest version of Espo in the given branch. --local may also be added to use the local archive if it exists
+    // --fetch [--local] --install  Remove /site, fetch and extract Espo to /site, and install without the extension
+    // --install [--db-reset]       Reinstall Espo (no extension) using the existing files in /site
+    // --before-to-end              Macro for: beforeInstall, copyExtension, composerInstall, rebuild, afterInstall, setOwner
+    // --copy [--composer-install]  Copy the extension to /site, set ownership of the files [, and run composer install]
 
     // Update the local archive for faster installs
     if (helpers.hasProcessParam('update-archive')) {
@@ -86,28 +104,32 @@ function buildGeneral(options = {}) {
     if (helpers.hasProcessParam('copy')) {
         copyExtension()
         .then(() => setOwner())
-        .then(() => composerInstall())
         .then(() => console.log('Done'));
     }
 
     if (helpers.hasProcessParam('before-install')) {
-        beforeInstall();
+        beforeInstall()
+        .then(() => console.log('Done'));
     }
 
     if (helpers.hasProcessParam('after-install')) {
-        afterInstall().then(() => console.log('Done'));
+        afterInstall()
+        .then(() => console.log('Done'));
     }
 
     if (helpers.hasProcessParam('extension')) {
-        buildExtension(options.extensionHook).then(() => console.log('Done'));
+        buildExtension(options.extensionHook)
+        .then(() => console.log('Done'));
     }
 
     if (helpers.hasProcessParam('rebuild')) {
-        rebuild().then(() => console.log('Done'));
+        rebuild()
+        .then(() => console.log('Done'));
     }
 
     if (helpers.hasProcessParam('composer-install')) {
-        composerInstall().then(() => console.log('Done'));
+        composerInstall()
+        .then(() => console.log('Done'));
     }
 }
 
