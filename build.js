@@ -57,24 +57,17 @@ function buildGeneral(options = {}) {
           branch: branch
         }
 
-        if(helpers.hasProcessParam("skip-extension")) {
-            fetchEspo(params)
-            .then(() => install())
-            .then(() => installExtensions())
-            .then(() => rebuild())
-            .then(() => setOwner());
-        } else {
-            fetchEspo(params)
-            .then(() => install())
-            .then(() => installExtensions())
-            .then(() => beforeInstall())
-            .then(() => copyExtension())
-            .then(() => composerInstall())
-            .then(() => rebuild())
-            .then(() => afterInstall())
-            .then(() => setOwner())
-            .then(() => console.log('Done'));
-        }
+        fetchEspo(params)
+        .then(() => install())
+        .then(() => installExtensions())
+        .then(() => beforeInstall())
+        .then(() => copyExtension())
+        .then(() => composerInstall())
+        .then(() => rebuild())
+        .then(() => afterInstall())
+        .then(() => setOwner())
+        .then(() => console.log('Done'));
+    }
     }
 
     if (helpers.hasProcessParam('install')) {
