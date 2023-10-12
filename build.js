@@ -32,7 +32,8 @@ function buildGeneral(options = {}) {
 
     // Delete and create the database
     if (helpers.hasProcessParam('db-reset')) {
-        databaseReset();
+        databaseReset()
+        .then(() => console.log('Done'));
     }
 
     // From BeforeInstall to the end
@@ -42,7 +43,8 @@ function buildGeneral(options = {}) {
         .then(() => composerInstall())
         .then(() => rebuild())
         .then(() => afterInstall())
-        .then(() => setOwner());
+        .then(() => setOwner())
+        .then(() => console.log('Done'));
     }
 
     // Replace constants in files
@@ -68,18 +70,17 @@ function buildGeneral(options = {}) {
         .then(() => setOwner())
         .then(() => console.log('Done'));
     }
-    }
 
     if (helpers.hasProcessParam('install')) {
-        install().then(() => {
-            installExtensions().then(() => {
-                setOwner().then(() => console.log('Done'));
-            });
-        });
+        install()
+        .then(() => installExtensions())
+        .then(() => setOwner())
+        .then(() => console.log('Done'));
     }
 
     if (helpers.hasProcessParam('fetch')) {
-        fetchEspo({branch: branch}).then(() => console.log('Done'));
+        fetchEspo({branch: branch})
+        .then(() => console.log('Done'));
     }
 
     if (helpers.hasProcessParam('copy')) {
