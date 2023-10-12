@@ -26,7 +26,8 @@ function buildGeneral(options = {}) {
 
     // Update the local archive for faster installs
     if (helpers.hasProcessParam('update-archive')) {
-      updateArchive({branch: branch});
+        updateArchive({branch: branch})
+        .then(() => console.log('Done'));
     }
 
     // Delete and create the database
@@ -128,44 +129,40 @@ function updateArchive (params) {
           fs.mkdirSync(cwd + '/archive');
       }
 
-      if (fs.existsSync(cwd + './archive/archive.zip')) {
-          fs.unlinkSync(cwd + './archive/archive.zip');
-      }
-
       let branch = params.branch || config.espocrm.branch;
 
-      if (config.espocrm.repository.indexOf('https://github.com') === 0) {
-          let repository = config.espocrm.repository;
-
-          if (repository.slice(-4) === '.git') {
-              repository = repository.slice(0, repository.length - 4);
-          }
-          if (repository.slice(-1) !== '/') {
-              repository += '/';
-          }
-          let archiveUrl = repository + 'archive/' + branch + '.zip';
-
-          console.log('  Downloading EspoCRM archive from Github...');
-
-          fetch(archiveUrl)
-              .then(response => {
-                  if (!response.ok) {
-                      throw new Error(`Unexpected response ${response.statusText}.`);
-                  }
-
-                  return response.body;
-              })
-              .then(body => {
-                  const streamPipeline = promisify(pipeline);
-
-                  return streamPipeline(body, fs.createWriteStream(cwd + '/archive/archive.zip'));
-              })
-      }
-      else {
-          throw new Error();
+      if (fs.existsSync(cwd + './archive/archive-' + branch + '.zip')) {
+          fs.unlinkSync(cwd + './archive/archive-' + branch + '.zip');
       }
 
+      if (config.espocrm.repository.indexOf('https://github.com') !== 0) {
+        throw new Error('Unexpected URL');
+      }
 
+      let repository = config.espocrm.repository;
+      if (repository.slice(-4) === '.git') {
+          repository = repository.slice(0, repository.length - 4);
+      }
+      if (repository.slice(-1) !== '/') {
+          repository += '/';
+      }
+
+      let archiveUrl = repository + 'archive/' + branch + '.zip';
+      console.log('  Downloading EspoCRM archive from Github...');
+
+      fetch(archiveUrl).then(response => {
+          if (!response.ok) {
+              throw new Error(`Unexpected response ${response.statusText}.`);
+          }
+          return response.body;
+      })
+      .then(body => {
+          const streamPipeline = promisify(pipeline);
+          let path = cwd + '/archive/archive-' + branch + '.zip'
+          console.log('  Download URL: ' + archiveUrl)
+          console.log('  Location: ' + path)
+          return streamPipeline(body, fs.createWriteStream(path));
+      })
   });
 }
 
