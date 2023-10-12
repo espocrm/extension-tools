@@ -203,23 +203,23 @@ function fetchEspo(params) {
 
     return new Promise((resolve) => {
         if (params.local) {
-            console.log('Using the existing archive...');
-
             let branch = params.branch || config.espocrm.branch;
 
-            if (!fs.existsSync(cwd + '/archive/archive.zip')) {
-                console.log("ERROR: No archive is available in ./archive")
+            let archivePath = cwd + '/archive/archive-' + branch + '.zip';
+            if (!fs.existsSync(archivePath)) {
+                console.log("ERROR: Could not locate " + archivePath)
                 fail();
             }
 
-            helpers.deleteDirRecursively(cwd + '/site');
+            console.log('Extracting the existing archive...');
+            console.log('  File: ' + archivePath);
 
+            helpers.deleteDirRecursively(cwd + '/site');
             if (!fs.existsSync(cwd + '/site')) {
                 fs.mkdirSync(cwd + '/site');
             }
 
-            const archive = new AdmZip(cwd + '/archive/archive.zip');
-
+            const archive = new AdmZip(archivePath);
             archive.extractAllTo(cwd + '/site', true, true);
 
             helpers
