@@ -97,7 +97,11 @@ function buildGeneral(options = {}) {
     }
 
     if (helpers.hasProcessParam('fetch')) {
-        fetchEspo({branch: branch})
+        const params = {
+          local: helpers.hasProcessParam("local"),
+          branch: branch
+        }
+        fetchEspo(params)
         .then(() => console.log('Done'));
     }
 
