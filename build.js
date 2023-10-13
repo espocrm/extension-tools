@@ -68,12 +68,6 @@ function buildGeneral(options = {}) {
         .then(() => console.log('Done'));
     }
 
-    // Replace constants in files
-    if (helpers.hasProcessParam('constants')) {
-        const path = helpers.hasProcessParam('prod') ? './build/tmp/files/' : './site/';
-        updateConstants({path: path})
-    }
-
     if (helpers.hasProcessParam('all')) {
         const params = {
           local: helpers.hasProcessParam("local"),
@@ -187,29 +181,6 @@ function updateArchive (params) {
           return streamPipeline(body, fs.createWriteStream(path));
       })
   });
-}
-
-function updateConstants (params) {
-  const defaultPath = "./site/";
-
-  params = params || { path: defaultPath };
-  if(params.path === '' || params.path === null || !params.hasOwnProperty('path'))
-    params.path = defaultPath;
-
-
-  return new Promise((resolve, fail) => {
-    if (fs.existsSync(cwd + '/php_scripts/update_constants.php')) {
-      let path = params.path + "/custom/Espo/Modules/Paragon/Resources";
-
-      console.log('Updating constants...');
-      cp.execSync("php update_constants.php " + path, {cwd: cwd + '/php_scripts'});
-
-      path = params.path + "/custom/Espo/Custom/Resources";
-      cp.execSync("php update_constants.php " + path, {cwd: cwd + '/php_scripts'});
-    }
-
-    resolve();
-  })
 }
 
 function databaseReset() {
@@ -485,8 +456,6 @@ function copyExtension() {
                 fs.copySync(cwd + '/tests', cwd + '/site/tests');
             }
 
-            updateConstants({path: "./site/"});
-
             resolve();
         })
     );
@@ -640,8 +609,6 @@ function buildExtension(hook) {
                 if (extensionParams.bundled) {
                     fs.copySync(cwd + '/build/assets/lib', cwd + `/build/tmp/files/client/custom/modules/${mod}/lib`);
                 }
-
-                updateConstants({path: "./build/tmp/files/"});
 
                 internalComposerBuildExtension();
 
