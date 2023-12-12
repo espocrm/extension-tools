@@ -62,13 +62,15 @@ function buildGeneral(options = {}) {
     }
 
     if (helpers.hasProcessParam('copy-file')) {
-        const file = helpers.getProcessParam('file');
+        let file = helpers.getProcessParam('file');
 
         if (!file) {
             console.error('No --file parameter specified.');
 
             return;
         }
+
+        file = file.replace('\\', '/');
 
         if (!file.startsWith('src/files')) {
             console.error('File should be in `src/files` dir.');
