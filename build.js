@@ -70,7 +70,15 @@ function buildGeneral(options = {}) {
             return;
         }
 
-        copyFile(file).then(() => {
+        if (!file.startsWith('src/files')) {
+            console.error('File should be in `src/files` dir.');
+
+            return;
+        }
+
+        const realFile = file.substring(10);
+
+        copyFile(realFile).then(() => {
             console.log('Done');
         });
 
