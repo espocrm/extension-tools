@@ -107,7 +107,21 @@ function buildGeneral(options = {}) {
 
     if (helpers.hasProcessParam('composer-install')) {
         composerInstall().then(() => console.log('Done'));
+
+        return;
     }
+
+    const flags = [
+        ['all', 'build all'],
+        ['extension', 'build extension package'],
+        ['copy', 'copy sources to the `site` directory'],
+        ['rebuild', 'run rebuild'],
+        ['composer-install', 'run `composer install` for the module']
+    ]
+
+    const msg = `\n Available flags:\n\n` + flags.map(it => ` --${it[0]} – ${it[1]};`).join('\n');
+
+    console.log(msg);
 }
 
 export {buildGeneral};
