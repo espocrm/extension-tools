@@ -216,7 +216,7 @@ function install() {
 
         cp.execSync("php install/cli.php -a \"checkPermission\"", {
             cwd: cwd + '/site',
-            stdio: 'ignore',
+            stdio: ['ignore', 'ignore', 'pipe'],
         });
 
         console.log('  Install: saveSettings...');
@@ -232,7 +232,7 @@ function install() {
 
         cp.execSync("php install/cli.php -a \"buildDatabase\"", {
             cwd: cwd + '/site',
-            stdio: 'ignore',
+            stdio: ['ignore', 'ignore', 'pipe'],
         });
 
         console.log('  Install: createUser...');
@@ -257,11 +257,11 @@ function install() {
 function buildEspo() {
     console.log('  Npm install...');
 
-    cp.execSync("npm ci", {cwd: cwd + '/site', stdio: 'ignore'});
+    cp.execSync("npm ci", {cwd: cwd + '/site', stdio: ['ignore', 'ignore', 'pipe']});
 
     console.log('  Building...');
 
-    cp.execSync("grunt", {cwd: cwd + '/site', stdio: 'ignore'});
+    cp.execSync("grunt", {cwd: cwd + '/site', stdio: ['ignore', 'ignore', 'pipe']});
 }
 
 function createConfig() {
@@ -621,7 +621,7 @@ function setOwner() {
                 "chown -R " + config.install.defaultOwner + ":" + config.install.defaultGroup + " .",
                 {
                     cwd: cwd + '/site',
-                    stdio: 'ignore',
+                    stdio: ['ignore', 'ignore', 'pipe'],
                 }
             );
         }
@@ -653,7 +653,7 @@ function internalComposerInstall(modulePath) {
         "composer install --no-dev --ignore-platform-reqs",
         {
             cwd: modulePath,
-            stdio: 'ignore',
+            stdio: ['ignore', 'ignore', 'pipe'],
         }
     );
 }
