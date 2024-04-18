@@ -1,6 +1,6 @@
 {
   "name": "espo-extension-tools",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Tools for EspoCRM extension development.",
   "main": "build.js",
   "scripts": {
