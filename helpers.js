@@ -166,13 +166,25 @@ Export.moveDir = (from_dir, to_dir) => fs.readdir(from_dir)
         .then(() => fs.rmdir(from_dir)));
 
 Export.getProcessParam = name => {
-    let value = null;
+    /** @type {string} */
+    let value;
 
     process.argv.forEach(item => {
-        if (item.indexOf('--'+name+'=') === 0) {
-            value = item.split('=')[1];
+        if (item.indexOf('--' + name + '=') === 0) {
+            value = item.split('=', 2)[1];
         }
     });
+
+    if (!value) {
+        return undefined;
+    }
+
+    if (
+        value.startsWith(`'`) && value.endsWith(`'`) ||
+        value.startsWith('"') && value.endsWith('"')
+    ) {
+        value = value.slice(1, -1);
+    }
 
     return value;
 }

@@ -1,11 +1,11 @@
 import fs from 'fs-extra';
-import unzipper from 'unzipper';
+import archiver from 'archiver';
 import cp from 'child_process';
 import path from 'path';
 import fetch from 'node-fetch';
 import {pipeline} from 'node:stream';
 import {promisify} from 'node:util';
-import archiver from 'archiver';
+import AdmZip from 'adm-zip';
 import helpers from './helpers.js';
 import {createRequire} from 'module';
 import {Transpiler, Bundler, TemplateBundler} from 'espo-frontend-build-tools';
@@ -23,7 +23,6 @@ const branch = helpers.getProcessParam('branch');
  * @param {{extensionHook: function()}} [options]
  */
 function buildGeneral(options = {}) {
-
     if (helpers.hasProcessParam('all')) {
         fetchEspo({branch: branch})
             .then(() => install())
@@ -35,6 +34,8 @@ function buildGeneral(options = {}) {
             .then(() => afterInstall())
             .then(() => setOwner())
             .then(() => console.log('Done'));
+
+        return;
     }
 
     if (helpers.hasProcessParam('install')) {
@@ -43,37 +44,91 @@ function buildGeneral(options = {}) {
                 setOwner().then(() => console.log('Done'));
             });
         });
+
+        return;
     }
 
     if (helpers.hasProcessParam('fetch')) {
         fetchEspo({branch: branch}).then(() => console.log('Done'));
+
+        return;
     }
 
     if (helpers.hasProcessParam('copy')) {
         copyExtension().then(() => {
             setOwner().then(() => console.log('Done'));
         });
+
+        return;
+    }
+
+    if (helpers.hasProcessParam('copy-file')) {
+        let file = helpers.getProcessParam('file');
+
+        if (!file) {
+            console.error('No --file parameter specified.');
+
+            return;
+        }
+
+        file = file.replace('\\', '/');
+
+        if (!file.startsWith('src/files')) {
+            console.error('File should be in `src/files` dir.');
+
+            return;
+        }
+
+        const realFile = file.substring(10);
+
+        copyFile(realFile).then(() => {
+            console.log('Done');
+        });
+
+        return;
     }
 
     if (helpers.hasProcessParam('before-install')) {
         beforeInstall().then(() => console.log('Done'));
+      
+        return;
     }
 
     if (helpers.hasProcessParam('after-install')) {
         afterInstall().then(() => console.log('Done'));
+
+        return;
     }
 
     if (helpers.hasProcessParam('extension')) {
         buildExtension(options.extensionHook).then(() => console.log('Done'));
+
+        return;
     }
 
     if (helpers.hasProcessParam('rebuild')) {
         rebuild().then(() => console.log('Done'));
+
+        return;
     }
 
     if (helpers.hasProcessParam('composer-install')) {
         composerInstall().then(() => console.log('Done'));
+
+        return;
     }
+
+    const flags = [
+        ['all', 'build all'],
+        ['extension', 'build extension package'],
+        ['copy', 'copy sources to the `site` directory'],
+        ['rebuild', 'run rebuild'],
+        ['composer-install', 'run `composer install` for the module']
+    ]
+
+    const msg = `\n Available flags:\n\n` + flags.map(it => ` --${it[0]} – ${it[1]};`).join('\n');
+
+    console.log(msg);
 }
 
 export {buildGeneral};
@@ -81,7 +136,7 @@ export {buildGeneral};
 function fetchEspo(params) {
     params = params || {};
 
-    return new Promise((resolve, fail) => {
+    return new Promise((resolve) => {
         console.log('Fetching EspoCRM repository...');
 
         if (fs.existsSync(cwd + '/site/archive.zip')) {
@@ -127,22 +182,18 @@ function fetchEspo(params) {
                 .then(() => {
                     console.log('  Unzipping...');
 
-                    fs.createReadStream(cwd + '/site/archive.zip')
-                        .pipe(unzipper.Extract({path: 'site'}))
-                        .on('close', () => {
-                            fs.unlinkSync(cwd + '/site/archive.zip');
+                    const archive = new AdmZip(cwd + '/site/archive.zip');
 
-                            helpers.moveDir(
-                                cwd + '/site/espocrm-' + branch.replace('/', '-'),
-                                cwd + '/site'
-                            )
-                                .then(() => resolve());
-                        })
-                        .on('error', () => {
-                            console.log('  Error while unzipping.');
+                    archive.extractAllTo(cwd + '/site', true, true);
 
-                            fail();
-                        });
+                    fs.unlinkSync(cwd + '/site/archive.zip');
+
+                    helpers
+                        .moveDir(
+                            cwd + '/site/espocrm-' + branch.replace('/', '-'),
+                            cwd + '/site'
+                        )
+                        .then(() => resolve());
                 });
         }
         else {
@@ -186,7 +237,7 @@ function install() {
 
         cp.execSync("php install/cli.php -a \"checkPermission\"", {
             cwd: cwd + '/site',
-            stdio: 'ignore',
+            stdio: ['ignore', 'ignore', 'pipe'],
         });
 
         console.log('  Install: saveSettings...');
@@ -202,7 +253,7 @@ function install() {
 
         cp.execSync("php install/cli.php -a \"buildDatabase\"", {
             cwd: cwd + '/site',
-            stdio: 'ignore',
+            stdio: ['ignore', 'ignore', 'pipe'],
         });
 
         console.log('  Install: createUser...');
@@ -227,11 +278,11 @@ function install() {
 function buildEspo() {
     console.log('  Npm install...');
 
-    cp.execSync("npm ci", {cwd: cwd + '/site', stdio: 'ignore'});
+    cp.execSync("npm ci", {cwd: cwd + '/site', stdio: ['ignore', 'ignore', 'pipe']});
 
     console.log('  Building...');
 
-    cp.execSync("grunt", {cwd: cwd + '/site', stdio: 'ignore'});
+    cp.execSync("grunt", {cwd: cwd + '/site', stdio: ['ignore', 'ignore', 'pipe']});
 }
 
 function createConfig() {
@@ -261,6 +312,37 @@ function createConfig() {
     fs.writeFileSync(cwd + '/site/data/config.php', configString);
 }
 
+/**
+ * @param {string} file
+ * @return {Promise<void>}
+ */
+function copyFile(file) {
+    return transpile(file).then(() => {
+        const moduleName = extensionParams.module;
+        const mod = helpers.camelCaseToHyphen(moduleName);
+
+        const clientSrcPath = `client/custom/modules/${mod}/src/`;
+
+        if (
+            file.startsWith(clientSrcPath) &&
+            file.endsWith('.js') &&
+            extensionParams.bundled &&
+            fs.existsSync(`${cwd}/build/assets/transpiled/${file.substring(7)}`)
+        ) {
+            fs.copySync(
+                `${cwd}/build/assets/transpiled/${file.substring(7)}`,
+                `${cwd}/site/client/custom/modules/${mod}/lib/transpiled/src/${file.substring(clientSrcPath.length)}`
+            );
+
+            console.log('  Copying transpiled...');
+        }
+
+        console.log('  Copying source...');
+
+        fs.copySync(`${cwd}/src/files/${file}`, `${cwd}/site/${file}`);
+    });
+}
+
 function copyExtension() {
     return transpile().then(() =>
         new Promise(resolve => {
@@ -281,7 +363,10 @@ function copyExtension() {
                 helpers.deleteDirRecursively(cwd + '/site/client/custom/modules/' + mod);
             }
 
-            if (extensionParams.bundled) {
+            if (
+                extensionParams.bundled &&
+                fs.existsSync(cwd + `/build/assets/transpiled/custom/modules/${mod}/src`)
+            ) {
                 fs.copySync(
                     cwd + `/build/assets/transpiled/custom/modules/${mod}/src`,
                     cwd + `/site/client/custom/modules/${mod}/lib/transpiled/src`
@@ -490,26 +575,41 @@ function buildExtension(hook) {
 }
 
 /**
+ * @param {string} [file]
  * @return {Promise<void>}
  */
-function transpile() {
+function transpile(file) {
     if (!extensionParams.bundled) {
         return Promise.resolve();
     }
 
-    helpers.deleteDirRecursively(cwd + `/build/assets/transpiled/custom`);
+    const mod = helpers.camelCaseToHyphen(extensionParams.module);
 
-    console.log('Transpiling...');
+    if (file && !file.startsWith(`client/custom/modules/${mod}/src/`)) {
+        return Promise.resolve();
+    }
 
-    const moduleNameHyphen = helpers.camelCaseToHyphen(extensionParams.module);
+    if (!file) {
+        helpers.deleteDirRecursively(`${cwd}/build/assets/transpiled/custom`);
+    }
 
-    const transpiler = new Transpiler({
-        path: `src/files/client/custom/modules/${moduleNameHyphen}`,
-        mod: moduleNameHyphen,
+    if (file) {
+       //
+    }
+
+    console.log('  Transpiling...');
+
+    const options = {
+        path: `src/files/client/custom/modules/${mod}`,
+        mod: mod,
         destDir: `build/assets/transpiled/custom`,
-    });
+    };
 
-    transpiler.process();
+    if (file) {
+        options.file = `src/files/${file}`;
+    }
+
+    (new Transpiler(options)).process();
 
     return Promise.resolve();
 }
@@ -552,7 +652,7 @@ function setOwner() {
                 "chown -R " + config.install.defaultOwner + ":" + config.install.defaultGroup + " .",
                 {
                     cwd: cwd + '/site',
-                    stdio: 'ignore',
+                    stdio: ['ignore', 'ignore', 'pipe'],
                 }
             );
         }
@@ -584,7 +684,7 @@ function internalComposerInstall(modulePath) {
         "composer install --no-dev --ignore-platform-reqs",
         {
             cwd: modulePath,
-            stdio: 'ignore',
+            stdio: ['ignore', 'ignore', 'pipe'],
         }
     );
 }
