@@ -217,8 +217,14 @@ function install() {
 
         const dbPlatform = config.database.platform ?? 'Mysql';
 
+        let host = config.database.host;
+
+        if (config.database.port) {
+            host += ':' + config.database.port;
+        }
+
         cp.execSync(
-            "php install/cli.php -a setupConfirmation -d \"host-name=" + config.database.host +
+            "php install/cli.php -a setupConfirmation -d \"host-name=" + host +
             "&db-name=" + config.database.dbname +
             "&db-platform=" + dbPlatform +
             "&db-user-name=" + config.database.user +
