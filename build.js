@@ -70,7 +70,7 @@ function buildGeneral(options = {}) {
             return;
         }
 
-        file = file.replace('\\', '/');
+        file = file.replaceAll('\\', '/');
 
         if (!file.startsWith('src/files')) {
             console.error('File should be in `src/files` dir.');
