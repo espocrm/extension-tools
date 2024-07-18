@@ -342,59 +342,62 @@ function copyFile(file) {
     });
 }
 
-function copyExtension() {
-    return transpile().then(() =>
-        new Promise(resolve => {
-            console.log('Copying extension to EspoCRM instance...');
+async function copyExtension() {
+    await transpile();
 
-            const moduleName = extensionParams.module;
-            const mod = helpers.camelCaseToHyphen(moduleName);
+    runScripts();
 
-            if (fs.existsSync(cwd + '/site/custom/Espo/Modules/' + moduleName)) {
-                console.log('  Removing backend files...');
+    const moduleName = extensionParams.module;
+    const mod = helpers.camelCaseToHyphen(moduleName);
 
-                helpers.deleteDirRecursively(cwd + '/site/custom/Espo/Modules/' + moduleName);
-            }
+    if (fs.existsSync(cwd + '/site/custom/Espo/Modules/' + moduleName)) {
+        console.log('  Removing backend files...');
 
-            if (fs.existsSync(cwd + '/site/client/custom/modules/' + mod)) {
-                console.log('  Removing frontend files...');
+        helpers.deleteDirRecursively(cwd + '/site/custom/Espo/Modules/' + moduleName);
+    }
 
-                helpers.deleteDirRecursively(cwd + '/site/client/custom/modules/' + mod);
-            }
+    if (fs.existsSync(cwd + '/site/client/custom/modules/' + mod)) {
+        console.log('  Removing frontend files...');
 
-            if (
-                extensionParams.bundled &&
-                fs.existsSync(cwd + `/build/assets/transpiled/custom/modules/${mod}/src`)
-            ) {
-                fs.copySync(
-                    cwd + `/build/assets/transpiled/custom/modules/${mod}/src`,
-                    cwd + `/site/client/custom/modules/${mod}/lib/transpiled/src`
-                );
-            }
+        helpers.deleteDirRecursively(cwd + '/site/client/custom/modules/' + mod);
+    }
 
-            if (fs.existsSync(cwd + '/site/tests/unit/Espo/Modules/' + moduleName)) {
-                console.log('  Removing unit test files...');
+    if (
+        extensionParams.bundled &&
+        fs.existsSync(cwd + `/build/assets/transpiled/custom/modules/${mod}/src`)
+    ) {
+        fs.copySync(
+            cwd + `/build/assets/transpiled/custom/modules/${mod}/src`,
+            cwd + `/site/client/custom/modules/${mod}/lib/transpiled/src`
+        );
+    }
 
-                helpers.deleteDirRecursively(cwd + '/site/tests/unit/Espo/Modules/' + moduleName);
-            }
+    if (fs.existsSync(cwd + `/build/assets/lib`)) {
+        fs.copySync(
+            cwd + `/build/assets/lib`,
+            cwd + `/site/client/custom/modules/${mod}/lib/`
+        );
+    }
 
-            if (fs.existsSync(cwd + '/site/tests/integration/Espo/Modules/' + moduleName)) {
-                console.log('  Removing integration test files...');
+    if (fs.existsSync(cwd + '/site/tests/unit/Espo/Modules/' + moduleName)) {
+        console.log('  Removing unit test files...');
 
-                helpers.deleteDirRecursively(cwd + '/site/tests/integration/Espo/Modules/' + moduleName);
-            }
+        helpers.deleteDirRecursively(cwd + '/site/tests/unit/Espo/Modules/' + moduleName);
+    }
 
-            console.log('  Copying files...');
+    if (fs.existsSync(cwd + '/site/tests/integration/Espo/Modules/' + moduleName)) {
+        console.log('  Removing integration test files...');
 
-            fs.copySync(cwd + '/src/files', cwd + '/site/');
+        helpers.deleteDirRecursively(cwd + '/site/tests/integration/Espo/Modules/' + moduleName);
+    }
 
-            if (fs.existsSync(cwd + '/tests')) {
-                fs.copySync(cwd + '/tests', cwd + '/site/tests');
-            }
+    console.log('  Copying files...');
 
-            resolve();
-        })
-    );
+    fs.copySync(cwd + '/src/files', cwd + '/site/');
+
+    if (fs.existsSync(cwd + '/tests')) {
+        fs.copySync(cwd + '/tests', cwd + '/site/tests');
+    }
 }
 
 function rebuild() {
@@ -415,6 +418,19 @@ function afterInstall () {
 
         resolve();
     })
+}
+
+
+function runScripts() {
+    const scripts = /** @type {string[]} */extensionParams.scripts || [];
+
+    if (scripts.length) {
+        console.log('  Running scripts...');
+    }
+
+    scripts.forEach(script => {
+        cp.execSync(script, {cwd: cwd, stdio: ['ignore', 'ignore', 'pipe']});
+    });
 }
 
 /**
@@ -491,6 +507,7 @@ function buildExtension(hook) {
 
             return Promise.resolve();
         })
+        .then(() => runScripts())
         .then(() =>
             new Promise(resolve => {
                 const moduleName = extensionParams.packageName ?? extensionParams.module;
@@ -583,7 +600,7 @@ function transpile(file) {
     }
 
     if (file) {
-       //
+        //
     }
 
     console.log('  Transpiling...');
