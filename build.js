@@ -480,8 +480,8 @@ function buildExtension(hook) {
 
             const result = bundler.bundle();
 
-            if (!fs.existsSync('build/assets/lib')) {
-                fs.mkdirSync('build/assets/lib');
+            if (!fs.existsSync(cwd + 'build/assets/lib')) {
+                fs.mkdirSync(cwd + 'build/assets/lib', {recursive: true});
             }
 
             // @todo Minify.
