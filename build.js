@@ -480,8 +480,8 @@ function buildExtension(hook) {
 
             const result = bundler.bundle();
 
-            if (!fs.existsSync(cwd + 'build/assets/lib')) {
-                fs.mkdirSync(cwd + 'build/assets/lib', {recursive: true});
+            if (!fs.existsSync('build/assets/lib')) {
+                fs.mkdirSync('build/assets/lib');
             }
 
             // @todo Minify.
@@ -532,6 +532,10 @@ function buildExtension(hook) {
                 };
 
                 const packageFileName = packageNameHyphen + '-' + packageParams.version + '.zip';
+
+                if (!fs.existsSync(cwd + '/build')) {
+                    fs.mkdirSync(cwd + '/build');
+                }
 
                 if (fs.existsSync(cwd + '/build/tmp')) {
                     helpers.deleteDirRecursively(cwd + '/build/tmp');
