@@ -551,6 +551,8 @@ function buildExtension(hook) {
 
                 if (extensionParams.bundled) {
                     fs.copySync(cwd + '/build/assets/lib', cwd + `/build/tmp/files/client/custom/modules/${mod}/lib`);
+
+                    helpers.deleteDirRecursively(`${cwd}/build/tmp/files/client/custom/modules/${mod}/src`);
                 }
 
                 internalComposerBuildExtension();
