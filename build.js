@@ -9,6 +9,7 @@ import AdmZip from 'adm-zip';
 import helpers from './helpers.js';
 import {createRequire} from 'module';
 import {Transpiler, Bundler, TemplateBundler} from 'espo-frontend-build-tools';
+import {minify} from 'terser';
 
 const require = createRequire(import.meta.url);
 
@@ -448,7 +449,7 @@ function buildExtension(hook) {
         .then(() => {
             helpers.deleteDirRecursively(cwd + `/build/assets/lib`);
         })
-        .then(() => {
+        .then(async () => {
             if (!extensionParams.bundled) {
                 return;
             }
@@ -484,15 +485,15 @@ function buildExtension(hook) {
 
             const result = bundler.bundle();
 
+            const minifiedSource = `/**LICENSE**/\n` +
+                (await minify(result[chunkName])).code;
+
             if (!fs.existsSync(cwd + '/build/assets/lib')) {
                 fs.mkdirSync(cwd + '/build/assets/lib', {recursive: true});
             }
 
-            // @todo Minify.
             fs.writeFileSync(cwd + '/build/assets/lib/init.js', result['init'], 'utf8');
-            fs.writeFileSync(cwd + `/build/assets/lib/${chunkName}.js`, result[chunkName], 'utf8');
-
-            return Promise.resolve();
+            fs.writeFileSync(cwd + `/build/assets/lib/${chunkName}.js`, minifiedSource, 'utf8');
         })
         .then(() => {
             if (!extensionParams.bundled) {
