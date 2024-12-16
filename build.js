@@ -38,6 +38,13 @@ function buildGeneral(options = {}) {
         return;
     }
 
+    if (helpers.hasProcessParam('prepare-test')) {
+        fetchEspo({branch: branch})
+            .then(() => siteComposerInstallDev());
+
+        return;
+    }
+
     if (helpers.hasProcessParam('install')) {
         install().then(() => {
             installExtensions().then(() => {
@@ -287,6 +294,12 @@ function buildEspo() {
     console.log('  Building...');
 
     cp.execSync("grunt internal", {cwd: cwd + '/site', stdio: ['ignore', 'ignore', 'pipe']});
+}
+
+function siteComposerInstallDev() {
+    console.log('Composer install...');
+
+    cp.execSync("composer install --ignore-platform-reqs", {cwd: cwd + '/site', stdio: 'ignore'});
 }
 
 function createConfig() {
