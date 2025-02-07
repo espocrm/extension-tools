@@ -9,5 +9,8 @@
     "php": [
         ">=8.1"
     ],
-    "bundled": true
+    "bundled": true,
+    "bundle": {
+        "requires": ["bundle!crm"]
+    }
 }
