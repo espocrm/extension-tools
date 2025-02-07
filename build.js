@@ -135,6 +135,14 @@ function buildGeneral(options = {}) {
         return;
     }
 
+    if (helpers.hasAnyProcessParam()) {
+        console.log("Unknown parameter.");
+
+        process.exit(1);
+
+        return;
+    }
+
     const flags = [
         ['all', 'build all'],
         ['extension', 'build extension package'],

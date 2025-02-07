@@ -207,11 +207,31 @@ Export.getProcessParam = name => {
     return value;
 }
 
+/**
+ * @param {string} string
+ * @return {string}
+ */
 Export.camelCaseToHyphen = (string => string.replace( /([a-z])([A-Z])/g, '$1-$2' ).toLowerCase());
 
+/**
+ * @return {boolean}
+ */
 Export.hasProcessParam = param => {
-    for (let i in process.argv) {
+    for (const i in process.argv) {
         if (process.argv[i] === '--' + param) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * @return {boolean}
+ */
+Export.hasAnyProcessParam = () => {
+    for (const i in process.argv) {
+        if (process.argv[i].startsWith('--')) {
             return true;
         }
     }
