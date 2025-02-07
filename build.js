@@ -15,6 +15,22 @@ const require = createRequire(import.meta.url);
 
 const cwd = process.cwd();
 
+/**
+ * @type {{
+ *     module: string,
+ *     packageName?: string,
+ *     bundled?: boolean,
+ *     bundle?: {
+ *         requires?: string[],
+ *     },
+ *     scripts?: string[],
+ *     name: string,
+ *     description?: string,
+ *     author?: string,
+ *     acceptableVersions: string[],
+ *     php: string[],
+ * }}
+ */
 const extensionParams = require(cwd + '/extension.json');
 
 const config = helpers.loadConfig();
@@ -476,11 +492,14 @@ function buildExtension(hook) {
                 init: {},
             };
 
+            const bundleParams = extensionParams.bundle || {};
+
             const chunkName = 'module-' + mod;
 
             chunks[chunkName] = {
                 patterns: [`custom/modules/${mod}/src/**/*.js`],
                 mapDependencies: true,
+                requires: bundleParams.requires,
             };
 
             const bundler = new Bundler(

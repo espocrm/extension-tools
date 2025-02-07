@@ -39,6 +39,24 @@ const mergeDeep = function (target, ...sources) {
 
 const Export = {};
 
+/**
+ * @return {{
+ *     espocrm: {
+ *         repository: string,
+ *         branch: string,
+ *     },
+ *     database: {
+ *         host: string,
+ *         port?: number|string|null,
+ *         dbname: string,
+ *         user: string,
+ *         password: string,
+ *         charset?: string,
+ *         platform?: string,
+ *     },
+ *     install: Record,
+ * }}
+ */
 Export.loadConfig = () => {
     const configDefault = require(cwd + '/config-default.json');
     let config;
