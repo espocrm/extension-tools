@@ -148,7 +148,8 @@ function buildGeneral(options = {}) {
         ['extension', 'build extension package'],
         ['copy', 'copy sources to the `site` directory'],
         ['rebuild', 'run rebuild'],
-        ['composer-install', 'run `composer install` for the module']
+        ['prepare-test', 'fetches Espo instance and runs composer'],
+        ['composer-install', 'run `composer install` for the module'],
     ]
 
     const msg = `\n Available flags:\n\n` + flags.map(it => ` --${it[0]} – ${it[1]};`).join('\n');
