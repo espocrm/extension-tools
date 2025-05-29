@@ -13,7 +13,7 @@
     "@types/fs-extra": "^11.0.4",
     "adm-zip": "^0.5.10",
     "archiver": "^4.0.1",
-    "espo-frontend-build-tools": "github:espocrm/frontend-build-tools#0.1.1",
+    "espo-frontend-build-tools": "github:espocrm/frontend-build-tools#0.2.0",
     "fs-extra": "^9.0.0",
     "mv": "^2.1.1",
     "node-fetch": "^3.3.1",
