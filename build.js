@@ -338,13 +338,10 @@ function siteComposerInstallDev() {
 function createConfig() {
     const config = helpers.loadConfig();
 
-    let charset = config.database.charset ?
-        "'" + config.database.charset + "'" : 'null';
+    const charset = config.database.charset ?  `'${config.database.charset}'` : 'null';
+    const port = config.database.port ? config.database.port : 'null';
 
-    let port = config.database.port ?
-        config.database.port : 'null';
-
-    let configString = `<?php
+    const configString = `<?php
         return [
             'database' => [
                 'host' => '${config.database.host}',
@@ -356,6 +353,7 @@ function createConfig() {
             ],
             'isDeveloperMode' => true,
             'useCache' => true,
+            'developedModule' => '${extensionParams.module}',
         ];
     `;
 
