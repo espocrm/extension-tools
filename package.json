@@ -11,12 +11,11 @@
   "license": "MIT",
   "dependencies": {
     "@types/fs-extra": "^11.0.4",
-    "adm-zip": "^0.5.10",
-    "archiver": "^4.0.1",
+    "adm-zip": "^0.5.16",
+    "archiver": "^7.0.1",
     "espo-frontend-build-tools": "github:espocrm/frontend-build-tools#0.2.0",
-    "fs-extra": "^9.0.0",
-    "mv": "^2.1.1",
-    "node-fetch": "^3.3.1",
-    "terser": "^5.33.0"
+    "fs-extra": "^11.3.0",
+    "node-fetch": "^3.3.2",
+    "terser": "^5.40.0"
   }
 }
