@@ -177,10 +177,18 @@ function fetchEspo(params) {
             fs.unlinkSync(cwd + '/site/archive.zip');
         }
 
-        helpers.deleteDirRecursively(cwd + '/site');
+        const siteDir = cwd + '/site';
 
-        if (!fs.existsSync(cwd + '/site')) {
-            fs.mkdirSync(cwd + '/site');
+        helpers.deleteDirRecursively(siteDir, [
+            siteDir + '/' + '.dummy',
+            siteDir + '/custom/Espo/Custom',
+            siteDir + '/tests/integration/config.php',
+            siteDir + '/data/config.php',
+            siteDir + '/data/config-internal.php',
+        ]);
+
+        if (!fs.existsSync(siteDir)) {
+            fs.mkdirSync(siteDir);
         }
 
         let branch = params.branch || config.espocrm.branch;

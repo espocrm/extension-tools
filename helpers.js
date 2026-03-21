@@ -79,13 +79,29 @@ const execute = (command, callback) => {
 
 Export.execute = execute;
 
-const deleteDirRecursively = path => {
+/**
+ *
+ * @param {string} path
+ * @param {string[]} keepFiles
+ */
+const deleteDirRecursively = (path, keepFiles = []) => {
+
+    function isDirEmpty(path) {
+        return fs.readdirSync(path).length === 0;
+    }
+
     if (fs.existsSync(path) && fs.lstatSync(path).isDirectory()) {
         fs.readdirSync(path).forEach(file => {
             const curPath = path + "/" + file;
 
+            if (keepFiles.includes(curPath)) {
+                console.log(curPath);
+
+                return;
+            }
+
             if (fs.lstatSync(curPath).isDirectory()) {
-                deleteDirRecursively(curPath);
+                deleteDirRecursively(curPath, keepFiles);
 
                 return;
             }
@@ -93,8 +109,18 @@ const deleteDirRecursively = path => {
             fs.unlinkSync(curPath);
         });
 
-        fs.rmdirSync(path);
+        if (keepFiles.includes(path)) {
+            return;
+        }
 
+        if (isDirEmpty(path)) {
+            fs.rmdirSync(path);
+        }
+
+        return;
+    }
+
+    if (keepFiles.includes(path)) {
         return;
     }
 
