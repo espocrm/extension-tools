@@ -95,8 +95,6 @@ const deleteDirRecursively = (path, keepFiles = []) => {
             const curPath = path + "/" + file;
 
             if (keepFiles.includes(curPath)) {
-                console.log(curPath);
-
                 return;
             }
 
