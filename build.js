@@ -1,4 +1,5 @@
 import fs from 'fs-extra';
+import fsAsync from 'fs/promises';
 import archiver from 'archiver';
 import cp from 'child_process';
 import path from 'path';
@@ -167,80 +168,77 @@ function buildGeneral(options = {}) {
 
 export {buildGeneral};
 
-function fetchEspo(params) {
+async function fetchEspo(params) {
     params = params || {};
 
-    return new Promise((resolve) => {
-        console.log('Fetching EspoCRM repository...');
+    console.log('Fetching EspoCRM repository...');
 
-        if (fs.existsSync(cwd + '/site/archive.zip')) {
-            fs.unlinkSync(cwd + '/site/archive.zip');
-        }
+    const siteDir = `${cwd}/site`;
 
-        const siteDir = cwd + '/site';
+    const archiveFile = `${siteDir}/archive.zip`;
 
-        helpers.deleteDirRecursively(siteDir, [
-            siteDir + '/' + '.dummy',
-            siteDir + '/custom/Espo/Custom',
-            siteDir + '/tests/integration/config.php',
-            siteDir + '/data/config.php',
-            siteDir + '/data/config-internal.php',
-        ]);
+    if (fs.existsSync(archiveFile)) {
+        await fsAsync.unlink(archiveFile);
+    }
 
-        if (!fs.existsSync(siteDir)) {
-            fs.mkdirSync(siteDir);
-        }
+    helpers.deleteDirRecursively(siteDir, [
+        `${siteDir}/.dummy`,
+        `${siteDir}/custom/Espo/Custom`,
+        `${siteDir}/tests/integration/config.php`,
+        `${siteDir}/data/config.php`,
+        `${siteDir}/data/config-internal.php`,
+    ]);
 
-        let branch = params.branch || config.espocrm.branch;
+    if (!fs.existsSync(siteDir)) {
+        await fsAsync.mkdir(siteDir);
+    }
 
-        if (config.espocrm.repository.indexOf('https://github.com') === 0) {
-            let repository = config.espocrm.repository;
+    let branch = params.branch ?? config.espocrm.branch;
 
-            if (repository.slice(-4) === '.git') {
-                repository = repository.slice(0, repository.length - 4);
-            }
+    if (config.espocrm.repository.indexOf('https://github.com') !== 0) {
+        throw new Error("No-GitHub repositories not supported.");
+    }
 
-            if (repository.slice(-1) !== '/') {
-                repository += '/';
-            }
+    let repository = config.espocrm.repository;
 
-            let archiveUrl = repository + 'archive/' + branch + '.zip';
+    if (repository.slice(-4) === '.git') {
+        repository = repository.slice(0, repository.length - 4);
+    }
 
-            console.log('  Downloading EspoCRM archive from Github...');
+    if (repository.slice(-1) !== '/') {
+        repository += '/';
+    }
 
-            fetch(archiveUrl)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Unexpected response ${response.statusText}.`);
-                    }
+    let archiveUrl = `${repository}archive/${branch}.zip`;
 
-                    return response.body;
-                })
-                .then(body => {
-                    const streamPipeline = promisify(pipeline);
+    console.log(`  Downloading archive ${repository} #${branch} ...`);
 
-                    return streamPipeline(body, fs.createWriteStream(cwd + '/site/archive.zip'));
-                })
-                .then(() => {
-                    console.log('  Unzipping...');
+    const response = await fetch(archiveUrl);
 
-                    const archive = new AdmZip(cwd + '/site/archive.zip');
+    if (!response.ok) {
+        throw new Error(`Unexpected response ${response.statusText}.`);
+    }
 
-                    archive.extractAllTo(cwd + '/site', true, true);
+    const streamPipeline = promisify(pipeline);
+    await streamPipeline(response.body, fs.createWriteStream(archiveFile));
 
-                    fs.unlinkSync(cwd + '/site/archive.zip');
+    console.log('  Unzipping...');
 
-                    helpers
-                        .moveDir(
-                            cwd + '/site/espocrm-' + branch.replace('/', '-'),
-                            cwd + '/site'
-                        )
-                        .then(() => resolve());
-                });
-        }
-        else {
-            throw new Error();
-        }
+    new AdmZip(archiveFile, {}).extractAllTo(siteDir, true, true);
+
+    await fsAsync.unlink(archiveFile);
+
+    const source = `${siteDir}/espocrm-${branch.replace('/', '-')}`;
+
+    await fsAsync.cp(source, siteDir, {
+        recursive: true,
+        force: false,
+        errorOnExist: false,
+    });
+
+    await fsAsync.rm(source, {
+        recursive: true,
+        force: true,
     });
 }
 
