@@ -342,15 +342,6 @@ function siteComposerInstallDev() {
 }
 
 function createConfig() {
-    if (
-        fs.existsSync('php_scripts/prepare_configs.php') &&
-        fs.existsSync(`${siteDir}/data/config.php`)
-    ) {
-        cp.execSync("php prepare_configs.php", {cwd: cwd + '/php_scripts'});
-
-        return;
-    }
-
     const config = helpers.loadConfig();
 
     const charset = config.database.charset ?  `'${config.database.charset}'` : 'null';
