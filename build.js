@@ -168,12 +168,12 @@ function buildGeneral(options = {}) {
 
 export {buildGeneral};
 
+const siteDir = `${cwd}/site`;
+
 async function fetchEspo(params) {
     params = params || {};
 
     console.log('Fetching EspoCRM repository...');
-
-    const siteDir = `${cwd}/site`;
 
     const archiveFile = `${siteDir}/archive.zip`;
 
@@ -342,10 +342,20 @@ function siteComposerInstallDev() {
 }
 
 function createConfig() {
+    if (
+        fs.existsSync('php_scripts/prepare_configs.php') &&
+        fs.existsSync(`${siteDir}/data/config.php`)
+    ) {
+        cp.execSync("php prepare_configs.php", {cwd: cwd + '/php_scripts'});
+
+        return;
+    }
+
     const config = helpers.loadConfig();
 
     const charset = config.database.charset ?  `'${config.database.charset}'` : 'null';
     const port = config.database.port ? config.database.port : 'null';
+    const platform = config.database.platform ?? 'Mysql';
 
     const configString = `<?php
         return [
@@ -356,6 +366,7 @@ function createConfig() {
                 'dbname' => '${config.database.dbname}',
                 'user' => '${config.database.user}',
                 'password' => '${config.database.password}',
+                'platform' => '${platform}',
             ],
             'isDeveloperMode' => true,
             'useCache' => true,
@@ -363,7 +374,18 @@ function createConfig() {
         ];
     `;
 
-    fs.writeFileSync(cwd + '/site/data/config.php', configString);
+    if (
+        fs.existsSync(`${cwd}/php_scripts/prepare_config.php`) &&
+        fs.existsSync(`${siteDir}/data/config.php`)
+    ) {
+        fs.writeFileSync(`${siteDir}/data/config-temp.php`, configString);
+        cp.execSync(`php prepare_config.php`, {cwd: `${cwd}/php_scripts`});
+        fs.unlinkSync(`${siteDir}/data/config-temp.php`);
+
+        return;
+    }
+
+    fs.writeFileSync(`${siteDir}/data/config.php`, configString);
 }
 
 /**
