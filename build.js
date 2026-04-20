@@ -558,7 +558,7 @@ function buildExtension(hook) {
             const chunkName = 'module-' + mod;
 
             chunks[chunkName] = {
-                patterns: [`custom/modules/${mod}/src/**/*.js`],
+                patterns: [`custom/modules/${mod}/src/**/*.{js,ts}`],
                 mapDependencies: true,
                 requires: bundleParams.requires,
             };
@@ -569,7 +569,7 @@ function buildExtension(hook) {
                     basePath: 'src/files/client',
                     transpiledPath: 'build/assets/transpiled',
                     modulePaths: modPaths,
-                    lookupPatterns: [`custom/modules/${mod}/src/**/*.js`],
+                    lookupPatterns: [`custom/modules/${mod}/src/**/*.{js,ts}`],
                     chunks: chunks,
                 },
                 [], // @todo
