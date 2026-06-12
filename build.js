@@ -390,15 +390,19 @@ function copyFile(file) {
 
         const clientSrcPath = `client/custom/modules/${mod}/src/`;
 
+        const tFile = file.endsWith('.ts') ?
+            file.slice(0, -3) + '.js' :
+            file;
+
         if (
             file.startsWith(clientSrcPath) &&
-            file.endsWith('.js') &&
+            tFile.endsWith('.js') &&
             extensionParams.bundled &&
-            fs.existsSync(`${cwd}/build/assets/transpiled/${file.substring(7)}`)
+            fs.existsSync(`${cwd}/build/assets/transpiled/${tFile.substring(7)}`)
         ) {
             fs.copySync(
-                `${cwd}/build/assets/transpiled/${file.substring(7)}`,
-                `${cwd}/site/client/custom/modules/${mod}/lib/transpiled/src/${file.substring(clientSrcPath.length)}`
+                `${cwd}/build/assets/transpiled/${tFile.substring(7)}`,
+                `${cwd}/site/client/custom/modules/${mod}/lib/transpiled/src/${tFile.substring(clientSrcPath.length)}`
             );
 
             console.log('  Copying transpiled...');
