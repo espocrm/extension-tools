@@ -1,3 +1,7 @@
 import {buildGeneral} from '../build.js';
 
-buildGeneral();
+buildGeneral({
+    extensionHook: () => {
+        console.log('  Extension install hook.');
+    },
+});

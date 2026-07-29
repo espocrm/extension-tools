@@ -38,7 +38,10 @@ const config = helpers.loadConfig();
 const branch = helpers.getProcessParam('branch');
 
 /**
- * @param {{extensionHook: function()}} [options]
+ * @param {{
+ *     extensionHook?: function(),
+ *     postComposerInstallHook?: ({dir: string}) => void,
+ * }} [options]
  */
 function buildGeneral(options = {}) {
     if (helpers.hasProcessParam('all')) {
@@ -46,7 +49,7 @@ function buildGeneral(options = {}) {
             .then(() => install())
             .then(() => installExtensions())
             .then(() => copyExtension())
-            .then(() => composerInstall())
+            .then(() => composerInstall(options))
             .then(() => rebuild())
             .then(() => afterInstall())
             .then(() => setOwner())
@@ -127,7 +130,7 @@ function buildGeneral(options = {}) {
     }
 
     if (helpers.hasProcessParam('extension')) {
-        buildExtension(options.extensionHook).then(() => console.log('Done'));
+        buildExtension(options).then(() => console.log('Done'));
 
         return;
     }
@@ -139,7 +142,8 @@ function buildGeneral(options = {}) {
     }
 
     if (helpers.hasProcessParam('composer-install')) {
-        composerInstall().then(() => console.log('Done'));
+        composerInstall(options)
+            .then(() => console.log('Done'));
 
         return;
     }
@@ -533,10 +537,13 @@ function runScripts() {
 }
 
 /**
- * @param {function} [hook]
+ * @param {{
+ *     extensionHook?: function(),
+ *     postComposerInstallHook?: ({dir: string}) => void,
+ * }} options
  * @return {Promise}
  */
-function buildExtension(hook) {
+function buildExtension(options) {
     console.log('Building extension package...');
 
     return transpile()
@@ -657,10 +664,10 @@ function buildExtension(hook) {
                     helpers.deleteDirRecursively(`${cwd}/build/tmp/files/client/custom/modules/${mod}/src`);
                 }
 
-                internalComposerBuildExtension();
+                internalComposerBuildExtension(options);
 
-                if (hook) {
-                    hook();
+                if (options.extensionHook) {
+                    options.extensionHook();
                 }
 
                 fs.writeFileSync(cwd + '/build/tmp/manifest.json', JSON.stringify(manifest, null, 4));
@@ -772,11 +779,22 @@ function setOwner() {
     });
 }
 
-function composerInstall() {
+/**
+ * @param {{
+ *     postComposerInstallHook?: ({dir: string}) => void,
+ * }} options
+ */
+function composerInstall(options) {
     return new Promise(resolve => {
         const moduleName = extensionParams.module;
 
-        internalComposerInstall(cwd + '/site/custom/Espo/Modules/' + moduleName);
+        const dir = cwd + '/site/custom/Espo/Modules/' + moduleName;
+
+        internalComposerInstall(dir);
+
+        if (options.postComposerInstallHook) {
+            options.postComposerInstallHook({dir: dir});
+        }
 
         resolve();
     });
@@ -799,10 +817,21 @@ function internalComposerInstall(modulePath) {
     );
 }
 
-function internalComposerBuildExtension() {
+/**
+ * @param {{
+ *     postComposerInstallHook?: ({dir: string}) => void,
+ * }} options
+ */
+function internalComposerBuildExtension(options) {
     const moduleName = extensionParams.module;
 
-    internalComposerInstall(cwd + '/build/tmp/files/custom/Espo/Modules/' + moduleName);
+    const dir = cwd + '/build/tmp/files/custom/Espo/Modules/' + moduleName;
+
+    internalComposerInstall(dir);
+
+    if (options.postComposerInstallHook) {
+        options.postComposerInstallHook({dir: dir});
+    }
 
     const removedFileList = [
         'files/custom/Espo/Modules/' + moduleName + '/composer.json',
